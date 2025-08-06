@@ -1,0 +1,124 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: postgres-pod
+  labels:
+    app: postgres
+spec:
+  containers:
+  - name: postgres
+    image: postgres:17.5
+    env:
+    - name: POSTGRES_PASSWORD
+      value: "postgress"
+    - name: POSTGRES_DB
+      value: "postgres"
+    - name: POSTGRES_USER
+      value: "postgres"
+    ports:
+    - containerPort: 5432
+      
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres-service
+spec:
+  selector:
+    app: postgres
+  ports:
+  - port: 5432
+    targetPort: 5432
+  type: ClusterIP
+  
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: redis-pod
+  labels:
+    app: redis
+spec:
+  containers:
+  - name: redis
+    image: redis:8.2.0
+    ports:
+    - containerPort: 6379
+      
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: redis-service
+spec:
+  selector:
+    app: redis
+  ports:
+  - port: 6379
+    targetPort: 6379
+  type: ClusterIP
+
+---
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: localstack-pod
+  labels:
+    app: localstack
+spec:
+  containers:
+  - name: localstack
+    image: localstack/localstack:latest
+    env:
+    - name: SERVICES
+      value: "s3,dynamodb,sqs,sns,lambda,apigateway,cloudformation,iam,sts"
+    - name: DEBUG
+      value: "1"
+    - name: DATA_DIR
+      value: "/var/lib/localstack/data"
+    - name: PERSISTENCE
+      value: "1"
+    - name: DOCKER_HOST
+      value: "unix:///var/run/docker.sock"
+    - name: TMPDIR
+      value: "/var/lib/localstack/tmp"
+    ports:
+    - containerPort: 4566
+      name: edge
+    - containerPort: 4510
+      name: service-start
+    - containerPort: 4559
+      name: service-end
+    volumeMounts:
+    - name: docker-sock
+      mountPath: /var/run/docker.sock
+      readOnly: true
+    - name: localstack-data
+      mountPath: /var/lib/localstack
+    securityContext:
+      privileged: true
+  volumes:
+  - name: docker-sock
+    hostPath:
+      path: /var/run/docker.sock
+      type: Socket
+  - name: localstack-data
+    emptyDir: {}
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: localstack-service
+spec:
+  selector:
+    app: localstack
+  ports:
+  - name: edge
+    port: 4566
+    targetPort: 4566
+  - name: services
+    port: 4510
+    targetPort: 4510
+  type: ClusterIP
