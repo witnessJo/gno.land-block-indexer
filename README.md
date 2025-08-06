@@ -1,0 +1,1 @@
+# gno.land-block-indexer
