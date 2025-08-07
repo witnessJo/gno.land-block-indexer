@@ -9,23 +9,35 @@ import (
 	"time"
 
 	"github.com/machinebox/graphql"
-
 	"gno.land-block-indexer/model"
 	"gno.land-block-indexer/repository"
 )
 
 type Service interface {
+	// repository operations
 	GetMissingBlocks() ([]model.Block, error)
 	GetBlocksMissingTxCount() ([]model.Block, error)
+	GetHighestBlock() (*model.Block, error)
+
+	// queue operations
 	PushBlock(block *model.Block) error
 	PushTransaction(transactions *model.Transaction) error
+
+	// poll operations (graphql)
+	PollHighestBlock() (*model.Block, error)
 	PollBlocks(offset int, limit int) ([]model.Block, error)
 	PollTransactions(blockOffset int, limit int) ([]model.Transaction, error)
+	SubscribeToBlocks(ctx context.Context, ch chan<- model.Block) error
 }
 
 type service struct {
 	repo   repository.Repository
 	client *http.Client
+}
+
+// GetHighestBlock implements Service.
+func (s *service) GetHighestBlock() (*model.Block, error) {
+	panic("unimplemented")
 }
 
 type ServiceConfig struct {
@@ -41,6 +53,11 @@ func NewService(config *ServiceConfig) Service {
 		repo:   repo,
 		client: &http.Client{Timeout: 30 * time.Second},
 	}
+}
+
+// PollHighestBlock implements Service.
+func (s *service) PollHighestBlock() (*model.Block, error) {
+	panic("unimplemented")
 }
 
 // PollBlocks implements Service.
@@ -322,6 +339,11 @@ func (s *service) PollTransactions(blockOffset int, limit int) ([]model.Transact
 	}
 
 	return transactions, nil
+}
+
+// SubscribeToBlocks implements Service.
+func (s *service) SubscribeToBlocks(ctx context.Context, ch chan<- model.Block) error {
+	panic("unimplemented")
 }
 
 // GetMissingBlocks implements Service.
