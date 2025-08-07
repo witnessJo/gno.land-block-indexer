@@ -32,9 +32,9 @@ echo "Waiting for LocalStack pod to be ready..."
 kubectl wait --for=condition=ready pod/localstack-pod --timeout=120s
 
 echo "Starting port forwarding..."
-kubectl port-forward postgres-pod 5432:5432 &
-kubectl port-forward redis-pod 6379:6379 &
-kubectl port-forward localstack-pod 4566:4566 &
+nohup kubectl port-forward pod/postgres-pod 5432:5432 > /dev/null 2>&1 &
+nohup kubectl port-forward pod/redis-pod 6379:6379 > /dev/null 2>&1 &
+nohup kubectl port-forward pod/localstack-pod 4566:4566 > /dev/null 2>&1 &
 
 echo "Port forwarding started!"
 echo "PostgreSQL: localhost:5432"
