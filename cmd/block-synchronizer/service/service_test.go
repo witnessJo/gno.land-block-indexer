@@ -8,13 +8,14 @@ import (
 
 func GetTestService() Service {
 	config := &ServiceConfig{
-		entConfig: repository.RepositoryEntConfig{
+		EntConfig: repository.RepositoryEntConfig{
 			Host:     "localhost",
 			Port:     5432,
 			User:     "postgres",
 			Password: "postgres",
 			Database: "postgres",
 		},
+		GraphqlEndpoint: "https://indexer.onbloc.xyz/graphql/query",
 	}
 	svc := NewService(config)
 	if svc == nil {

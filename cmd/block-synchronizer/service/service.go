@@ -32,7 +32,7 @@ type Service interface {
 
 type service struct {
 	repo   repository.Repository
-	client *http.Client
+	client *graphql.Client
 }
 
 // GetHighestBlock implements Service.
@@ -41,17 +41,21 @@ func (s *service) GetHighestBlock() (*model.Block, error) {
 }
 
 type ServiceConfig struct {
-	entConfig repository.RepositoryEntConfig
+	GraphqlEndpoint string
+	EntConfig       repository.RepositoryEntConfig
 }
 
 func NewService(config *ServiceConfig) Service {
 	repo := repository.NewRepositoryEnt(
-		&config.entConfig,
+		&config.EntConfig,
 	)
+	client := graphql.NewClient(config.GraphqlEndpoint, graphql.WithHTTPClient(&http.Client{
+		Timeout: 30 * time.Second,
+	}))
 
 	return &service{
 		repo:   repo,
-		client: &http.Client{Timeout: 30 * time.Second},
+		client: client,
 	}
 }
 
@@ -62,8 +66,6 @@ func (s *service) PollHighestBlock() (*model.Block, error) {
 
 // PollBlocks implements Service.
 func (s *service) PollBlocks(offset int, limit int) ([]model.Block, error) {
-	client := graphql.NewClient("https://indexer.onbloc.xyz/graphql/query")
-
 	// GraphQL 쿼리
 	req := graphql.NewRequest(fmt.Sprintf(`
         query {
@@ -99,7 +101,7 @@ func (s *service) PollBlocks(offset int, limit int) ([]model.Block, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
-	if err := client.Run(ctx, req, &resp); err != nil {
+	if err := s.client.Run(ctx, req, &resp); err != nil {
 		return nil, fmt.Errorf("failed to execute GraphQL query: %w", err)
 	}
 
@@ -129,8 +131,6 @@ func (s *service) PollBlocks(offset int, limit int) ([]model.Block, error) {
 
 // PollTransactions implements Service.
 func (s *service) PollTransactions(blockOffset int, limit int) ([]model.Transaction, error) {
-	client := graphql.NewClient("https://indexer.onbloc.xyz/graphql/query")
-
 	// GraphQL 쿼리 - inline fragments 사용
 	req := graphql.NewRequest(fmt.Sprintf(`
         query {
@@ -284,7 +284,7 @@ func (s *service) PollTransactions(blockOffset int, limit int) ([]model.Transact
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
-	if err := client.Run(ctx, req, &resp); err != nil {
+	if err := s.client.Run(ctx, req, &resp); err != nil {
 		return nil, fmt.Errorf("failed to execute GraphQL query: %w", err)
 	}
 
