@@ -100,14 +100,14 @@ func (_u *TransactionUpdate) AddBlockHeight(v int) *TransactionUpdate {
 }
 
 // SetGasWanted sets the "gas_wanted" field.
-func (_u *TransactionUpdate) SetGasWanted(v int) *TransactionUpdate {
+func (_u *TransactionUpdate) SetGasWanted(v float64) *TransactionUpdate {
 	_u.mutation.ResetGasWanted()
 	_u.mutation.SetGasWanted(v)
 	return _u
 }
 
 // SetNillableGasWanted sets the "gas_wanted" field if the given value is not nil.
-func (_u *TransactionUpdate) SetNillableGasWanted(v *int) *TransactionUpdate {
+func (_u *TransactionUpdate) SetNillableGasWanted(v *float64) *TransactionUpdate {
 	if v != nil {
 		_u.SetGasWanted(*v)
 	}
@@ -115,20 +115,20 @@ func (_u *TransactionUpdate) SetNillableGasWanted(v *int) *TransactionUpdate {
 }
 
 // AddGasWanted adds value to the "gas_wanted" field.
-func (_u *TransactionUpdate) AddGasWanted(v int) *TransactionUpdate {
+func (_u *TransactionUpdate) AddGasWanted(v float64) *TransactionUpdate {
 	_u.mutation.AddGasWanted(v)
 	return _u
 }
 
 // SetGasUsed sets the "gas_used" field.
-func (_u *TransactionUpdate) SetGasUsed(v int) *TransactionUpdate {
+func (_u *TransactionUpdate) SetGasUsed(v float64) *TransactionUpdate {
 	_u.mutation.ResetGasUsed()
 	_u.mutation.SetGasUsed(v)
 	return _u
 }
 
 // SetNillableGasUsed sets the "gas_used" field if the given value is not nil.
-func (_u *TransactionUpdate) SetNillableGasUsed(v *int) *TransactionUpdate {
+func (_u *TransactionUpdate) SetNillableGasUsed(v *float64) *TransactionUpdate {
 	if v != nil {
 		_u.SetGasUsed(*v)
 	}
@@ -136,7 +136,7 @@ func (_u *TransactionUpdate) SetNillableGasUsed(v *int) *TransactionUpdate {
 }
 
 // AddGasUsed adds value to the "gas_used" field.
-func (_u *TransactionUpdate) AddGasUsed(v int) *TransactionUpdate {
+func (_u *TransactionUpdate) AddGasUsed(v float64) *TransactionUpdate {
 	_u.mutation.AddGasUsed(v)
 	return _u
 }
@@ -162,14 +162,16 @@ func (_u *TransactionUpdate) ClearMemo() *TransactionUpdate {
 }
 
 // SetGasFee sets the "gas_fee" field.
-func (_u *TransactionUpdate) SetGasFee(v []schema.GasFee) *TransactionUpdate {
+func (_u *TransactionUpdate) SetGasFee(v schema.GasFee) *TransactionUpdate {
 	_u.mutation.SetGasFee(v)
 	return _u
 }
 
-// AppendGasFee appends value to the "gas_fee" field.
-func (_u *TransactionUpdate) AppendGasFee(v []schema.GasFee) *TransactionUpdate {
-	_u.mutation.AppendGasFee(v)
+// SetNillableGasFee sets the "gas_fee" field if the given value is not nil.
+func (_u *TransactionUpdate) SetNillableGasFee(v *schema.GasFee) *TransactionUpdate {
+	if v != nil {
+		_u.SetGasFee(*v)
+	}
 	return _u
 }
 
@@ -290,16 +292,16 @@ func (_u *TransactionUpdate) sqlSave(ctx context.Context) (_node int, err error)
 		_spec.AddField(transaction.FieldBlockHeight, field.TypeInt, value)
 	}
 	if value, ok := _u.mutation.GasWanted(); ok {
-		_spec.SetField(transaction.FieldGasWanted, field.TypeInt, value)
+		_spec.SetField(transaction.FieldGasWanted, field.TypeFloat64, value)
 	}
 	if value, ok := _u.mutation.AddedGasWanted(); ok {
-		_spec.AddField(transaction.FieldGasWanted, field.TypeInt, value)
+		_spec.AddField(transaction.FieldGasWanted, field.TypeFloat64, value)
 	}
 	if value, ok := _u.mutation.GasUsed(); ok {
-		_spec.SetField(transaction.FieldGasUsed, field.TypeInt, value)
+		_spec.SetField(transaction.FieldGasUsed, field.TypeFloat64, value)
 	}
 	if value, ok := _u.mutation.AddedGasUsed(); ok {
-		_spec.AddField(transaction.FieldGasUsed, field.TypeInt, value)
+		_spec.AddField(transaction.FieldGasUsed, field.TypeFloat64, value)
 	}
 	if value, ok := _u.mutation.Memo(); ok {
 		_spec.SetField(transaction.FieldMemo, field.TypeString, value)
@@ -309,11 +311,6 @@ func (_u *TransactionUpdate) sqlSave(ctx context.Context) (_node int, err error)
 	}
 	if value, ok := _u.mutation.GasFee(); ok {
 		_spec.SetField(transaction.FieldGasFee, field.TypeJSON, value)
-	}
-	if value, ok := _u.mutation.AppendedGasFee(); ok {
-		_spec.AddModifier(func(u *sql.UpdateBuilder) {
-			sqljson.Append(u, transaction.FieldGasFee, value)
-		})
 	}
 	if _u.mutation.GasFeeCleared() {
 		_spec.ClearField(transaction.FieldGasFee, field.TypeJSON)
@@ -426,14 +423,14 @@ func (_u *TransactionUpdateOne) AddBlockHeight(v int) *TransactionUpdateOne {
 }
 
 // SetGasWanted sets the "gas_wanted" field.
-func (_u *TransactionUpdateOne) SetGasWanted(v int) *TransactionUpdateOne {
+func (_u *TransactionUpdateOne) SetGasWanted(v float64) *TransactionUpdateOne {
 	_u.mutation.ResetGasWanted()
 	_u.mutation.SetGasWanted(v)
 	return _u
 }
 
 // SetNillableGasWanted sets the "gas_wanted" field if the given value is not nil.
-func (_u *TransactionUpdateOne) SetNillableGasWanted(v *int) *TransactionUpdateOne {
+func (_u *TransactionUpdateOne) SetNillableGasWanted(v *float64) *TransactionUpdateOne {
 	if v != nil {
 		_u.SetGasWanted(*v)
 	}
@@ -441,20 +438,20 @@ func (_u *TransactionUpdateOne) SetNillableGasWanted(v *int) *TransactionUpdateO
 }
 
 // AddGasWanted adds value to the "gas_wanted" field.
-func (_u *TransactionUpdateOne) AddGasWanted(v int) *TransactionUpdateOne {
+func (_u *TransactionUpdateOne) AddGasWanted(v float64) *TransactionUpdateOne {
 	_u.mutation.AddGasWanted(v)
 	return _u
 }
 
 // SetGasUsed sets the "gas_used" field.
-func (_u *TransactionUpdateOne) SetGasUsed(v int) *TransactionUpdateOne {
+func (_u *TransactionUpdateOne) SetGasUsed(v float64) *TransactionUpdateOne {
 	_u.mutation.ResetGasUsed()
 	_u.mutation.SetGasUsed(v)
 	return _u
 }
 
 // SetNillableGasUsed sets the "gas_used" field if the given value is not nil.
-func (_u *TransactionUpdateOne) SetNillableGasUsed(v *int) *TransactionUpdateOne {
+func (_u *TransactionUpdateOne) SetNillableGasUsed(v *float64) *TransactionUpdateOne {
 	if v != nil {
 		_u.SetGasUsed(*v)
 	}
@@ -462,7 +459,7 @@ func (_u *TransactionUpdateOne) SetNillableGasUsed(v *int) *TransactionUpdateOne
 }
 
 // AddGasUsed adds value to the "gas_used" field.
-func (_u *TransactionUpdateOne) AddGasUsed(v int) *TransactionUpdateOne {
+func (_u *TransactionUpdateOne) AddGasUsed(v float64) *TransactionUpdateOne {
 	_u.mutation.AddGasUsed(v)
 	return _u
 }
@@ -488,14 +485,16 @@ func (_u *TransactionUpdateOne) ClearMemo() *TransactionUpdateOne {
 }
 
 // SetGasFee sets the "gas_fee" field.
-func (_u *TransactionUpdateOne) SetGasFee(v []schema.GasFee) *TransactionUpdateOne {
+func (_u *TransactionUpdateOne) SetGasFee(v schema.GasFee) *TransactionUpdateOne {
 	_u.mutation.SetGasFee(v)
 	return _u
 }
 
-// AppendGasFee appends value to the "gas_fee" field.
-func (_u *TransactionUpdateOne) AppendGasFee(v []schema.GasFee) *TransactionUpdateOne {
-	_u.mutation.AppendGasFee(v)
+// SetNillableGasFee sets the "gas_fee" field if the given value is not nil.
+func (_u *TransactionUpdateOne) SetNillableGasFee(v *schema.GasFee) *TransactionUpdateOne {
+	if v != nil {
+		_u.SetGasFee(*v)
+	}
 	return _u
 }
 
@@ -646,16 +645,16 @@ func (_u *TransactionUpdateOne) sqlSave(ctx context.Context) (_node *Transaction
 		_spec.AddField(transaction.FieldBlockHeight, field.TypeInt, value)
 	}
 	if value, ok := _u.mutation.GasWanted(); ok {
-		_spec.SetField(transaction.FieldGasWanted, field.TypeInt, value)
+		_spec.SetField(transaction.FieldGasWanted, field.TypeFloat64, value)
 	}
 	if value, ok := _u.mutation.AddedGasWanted(); ok {
-		_spec.AddField(transaction.FieldGasWanted, field.TypeInt, value)
+		_spec.AddField(transaction.FieldGasWanted, field.TypeFloat64, value)
 	}
 	if value, ok := _u.mutation.GasUsed(); ok {
-		_spec.SetField(transaction.FieldGasUsed, field.TypeInt, value)
+		_spec.SetField(transaction.FieldGasUsed, field.TypeFloat64, value)
 	}
 	if value, ok := _u.mutation.AddedGasUsed(); ok {
-		_spec.AddField(transaction.FieldGasUsed, field.TypeInt, value)
+		_spec.AddField(transaction.FieldGasUsed, field.TypeFloat64, value)
 	}
 	if value, ok := _u.mutation.Memo(); ok {
 		_spec.SetField(transaction.FieldMemo, field.TypeString, value)
@@ -665,11 +664,6 @@ func (_u *TransactionUpdateOne) sqlSave(ctx context.Context) (_node *Transaction
 	}
 	if value, ok := _u.mutation.GasFee(); ok {
 		_spec.SetField(transaction.FieldGasFee, field.TypeJSON, value)
-	}
-	if value, ok := _u.mutation.AppendedGasFee(); ok {
-		_spec.AddModifier(func(u *sql.UpdateBuilder) {
-			sqljson.Append(u, transaction.FieldGasFee, value)
-		})
 	}
 	if _u.mutation.GasFeeCleared() {
 		_spec.ClearField(transaction.FieldGasFee, field.TypeJSON)

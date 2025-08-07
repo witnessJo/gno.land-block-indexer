@@ -740,13 +740,12 @@ type TransactionMutation struct {
 	success         *bool
 	block_height    *int
 	addblock_height *int
-	gas_wanted      *int
-	addgas_wanted   *int
-	gas_used        *int
-	addgas_used     *int
+	gas_wanted      *float64
+	addgas_wanted   *float64
+	gas_used        *float64
+	addgas_used     *float64
 	memo            *string
-	gas_fee         *[]schema.GasFee
-	appendgas_fee   []schema.GasFee
+	gas_fee         *schema.GasFee
 	messages        *[]schema.Message
 	appendmessages  []schema.Message
 	response        *schema.Response
@@ -1040,13 +1039,13 @@ func (m *TransactionMutation) ResetBlockHeight() {
 }
 
 // SetGasWanted sets the "gas_wanted" field.
-func (m *TransactionMutation) SetGasWanted(i int) {
-	m.gas_wanted = &i
+func (m *TransactionMutation) SetGasWanted(f float64) {
+	m.gas_wanted = &f
 	m.addgas_wanted = nil
 }
 
 // GasWanted returns the value of the "gas_wanted" field in the mutation.
-func (m *TransactionMutation) GasWanted() (r int, exists bool) {
+func (m *TransactionMutation) GasWanted() (r float64, exists bool) {
 	v := m.gas_wanted
 	if v == nil {
 		return
@@ -1057,7 +1056,7 @@ func (m *TransactionMutation) GasWanted() (r int, exists bool) {
 // OldGasWanted returns the old "gas_wanted" field's value of the Transaction entity.
 // If the Transaction object wasn't provided to the builder, the object is fetched from the database.
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *TransactionMutation) OldGasWanted(ctx context.Context) (v int, err error) {
+func (m *TransactionMutation) OldGasWanted(ctx context.Context) (v float64, err error) {
 	if !m.op.Is(OpUpdateOne) {
 		return v, errors.New("OldGasWanted is only allowed on UpdateOne operations")
 	}
@@ -1071,17 +1070,17 @@ func (m *TransactionMutation) OldGasWanted(ctx context.Context) (v int, err erro
 	return oldValue.GasWanted, nil
 }
 
-// AddGasWanted adds i to the "gas_wanted" field.
-func (m *TransactionMutation) AddGasWanted(i int) {
+// AddGasWanted adds f to the "gas_wanted" field.
+func (m *TransactionMutation) AddGasWanted(f float64) {
 	if m.addgas_wanted != nil {
-		*m.addgas_wanted += i
+		*m.addgas_wanted += f
 	} else {
-		m.addgas_wanted = &i
+		m.addgas_wanted = &f
 	}
 }
 
 // AddedGasWanted returns the value that was added to the "gas_wanted" field in this mutation.
-func (m *TransactionMutation) AddedGasWanted() (r int, exists bool) {
+func (m *TransactionMutation) AddedGasWanted() (r float64, exists bool) {
 	v := m.addgas_wanted
 	if v == nil {
 		return
@@ -1096,13 +1095,13 @@ func (m *TransactionMutation) ResetGasWanted() {
 }
 
 // SetGasUsed sets the "gas_used" field.
-func (m *TransactionMutation) SetGasUsed(i int) {
-	m.gas_used = &i
+func (m *TransactionMutation) SetGasUsed(f float64) {
+	m.gas_used = &f
 	m.addgas_used = nil
 }
 
 // GasUsed returns the value of the "gas_used" field in the mutation.
-func (m *TransactionMutation) GasUsed() (r int, exists bool) {
+func (m *TransactionMutation) GasUsed() (r float64, exists bool) {
 	v := m.gas_used
 	if v == nil {
 		return
@@ -1113,7 +1112,7 @@ func (m *TransactionMutation) GasUsed() (r int, exists bool) {
 // OldGasUsed returns the old "gas_used" field's value of the Transaction entity.
 // If the Transaction object wasn't provided to the builder, the object is fetched from the database.
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *TransactionMutation) OldGasUsed(ctx context.Context) (v int, err error) {
+func (m *TransactionMutation) OldGasUsed(ctx context.Context) (v float64, err error) {
 	if !m.op.Is(OpUpdateOne) {
 		return v, errors.New("OldGasUsed is only allowed on UpdateOne operations")
 	}
@@ -1127,17 +1126,17 @@ func (m *TransactionMutation) OldGasUsed(ctx context.Context) (v int, err error)
 	return oldValue.GasUsed, nil
 }
 
-// AddGasUsed adds i to the "gas_used" field.
-func (m *TransactionMutation) AddGasUsed(i int) {
+// AddGasUsed adds f to the "gas_used" field.
+func (m *TransactionMutation) AddGasUsed(f float64) {
 	if m.addgas_used != nil {
-		*m.addgas_used += i
+		*m.addgas_used += f
 	} else {
-		m.addgas_used = &i
+		m.addgas_used = &f
 	}
 }
 
 // AddedGasUsed returns the value that was added to the "gas_used" field in this mutation.
-func (m *TransactionMutation) AddedGasUsed() (r int, exists bool) {
+func (m *TransactionMutation) AddedGasUsed() (r float64, exists bool) {
 	v := m.addgas_used
 	if v == nil {
 		return
@@ -1201,13 +1200,12 @@ func (m *TransactionMutation) ResetMemo() {
 }
 
 // SetGasFee sets the "gas_fee" field.
-func (m *TransactionMutation) SetGasFee(sf []schema.GasFee) {
+func (m *TransactionMutation) SetGasFee(sf schema.GasFee) {
 	m.gas_fee = &sf
-	m.appendgas_fee = nil
 }
 
 // GasFee returns the value of the "gas_fee" field in the mutation.
-func (m *TransactionMutation) GasFee() (r []schema.GasFee, exists bool) {
+func (m *TransactionMutation) GasFee() (r schema.GasFee, exists bool) {
 	v := m.gas_fee
 	if v == nil {
 		return
@@ -1218,7 +1216,7 @@ func (m *TransactionMutation) GasFee() (r []schema.GasFee, exists bool) {
 // OldGasFee returns the old "gas_fee" field's value of the Transaction entity.
 // If the Transaction object wasn't provided to the builder, the object is fetched from the database.
 // An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *TransactionMutation) OldGasFee(ctx context.Context) (v []schema.GasFee, err error) {
+func (m *TransactionMutation) OldGasFee(ctx context.Context) (v schema.GasFee, err error) {
 	if !m.op.Is(OpUpdateOne) {
 		return v, errors.New("OldGasFee is only allowed on UpdateOne operations")
 	}
@@ -1232,23 +1230,9 @@ func (m *TransactionMutation) OldGasFee(ctx context.Context) (v []schema.GasFee,
 	return oldValue.GasFee, nil
 }
 
-// AppendGasFee adds sf to the "gas_fee" field.
-func (m *TransactionMutation) AppendGasFee(sf []schema.GasFee) {
-	m.appendgas_fee = append(m.appendgas_fee, sf...)
-}
-
-// AppendedGasFee returns the list of values that were appended to the "gas_fee" field in this mutation.
-func (m *TransactionMutation) AppendedGasFee() ([]schema.GasFee, bool) {
-	if len(m.appendgas_fee) == 0 {
-		return nil, false
-	}
-	return m.appendgas_fee, true
-}
-
 // ClearGasFee clears the value of the "gas_fee" field.
 func (m *TransactionMutation) ClearGasFee() {
 	m.gas_fee = nil
-	m.appendgas_fee = nil
 	m.clearedFields[transaction.FieldGasFee] = struct{}{}
 }
 
@@ -1261,7 +1245,6 @@ func (m *TransactionMutation) GasFeeCleared() bool {
 // ResetGasFee resets all changes to the "gas_fee" field.
 func (m *TransactionMutation) ResetGasFee() {
 	m.gas_fee = nil
-	m.appendgas_fee = nil
 	delete(m.clearedFields, transaction.FieldGasFee)
 }
 
@@ -1582,14 +1565,14 @@ func (m *TransactionMutation) SetField(name string, value ent.Value) error {
 		m.SetBlockHeight(v)
 		return nil
 	case transaction.FieldGasWanted:
-		v, ok := value.(int)
+		v, ok := value.(float64)
 		if !ok {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetGasWanted(v)
 		return nil
 	case transaction.FieldGasUsed:
-		v, ok := value.(int)
+		v, ok := value.(float64)
 		if !ok {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
@@ -1603,7 +1586,7 @@ func (m *TransactionMutation) SetField(name string, value ent.Value) error {
 		m.SetMemo(v)
 		return nil
 	case transaction.FieldGasFee:
-		v, ok := value.([]schema.GasFee)
+		v, ok := value.(schema.GasFee)
 		if !ok {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
@@ -1690,14 +1673,14 @@ func (m *TransactionMutation) AddField(name string, value ent.Value) error {
 		m.AddBlockHeight(v)
 		return nil
 	case transaction.FieldGasWanted:
-		v, ok := value.(int)
+		v, ok := value.(float64)
 		if !ok {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.AddGasWanted(v)
 		return nil
 	case transaction.FieldGasUsed:
-		v, ok := value.(int)
+		v, ok := value.(float64)
 		if !ok {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}

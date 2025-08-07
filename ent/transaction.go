@@ -28,13 +28,13 @@ type Transaction struct {
 	// Height of the block containing the transaction
 	BlockHeight int `json:"block_height,omitempty"`
 	// Gas wanted for the transaction
-	GasWanted int `json:"gas_wanted,omitempty"`
+	GasWanted float64 `json:"gas_wanted,omitempty"`
 	// Gas used by the transaction
-	GasUsed int `json:"gas_used,omitempty"`
+	GasUsed float64 `json:"gas_used,omitempty"`
 	// Memo of the transaction
 	Memo string `json:"memo,omitempty"`
 	// Gas fee paid for the transaction
-	GasFee []schema.GasFee `json:"gas_fee,omitempty"`
+	GasFee schema.GasFee `json:"gas_fee,omitempty"`
 	// Messages in the transaction
 	Messages []schema.Message `json:"messages,omitempty"`
 	// Response of the transaction
@@ -53,7 +53,9 @@ func (*Transaction) scanValues(columns []string) ([]any, error) {
 			values[i] = new([]byte)
 		case transaction.FieldSuccess:
 			values[i] = new(sql.NullBool)
-		case transaction.FieldID, transaction.FieldIndex, transaction.FieldBlockHeight, transaction.FieldGasWanted, transaction.FieldGasUsed:
+		case transaction.FieldGasWanted, transaction.FieldGasUsed:
+			values[i] = new(sql.NullFloat64)
+		case transaction.FieldID, transaction.FieldIndex, transaction.FieldBlockHeight:
 			values[i] = new(sql.NullInt64)
 		case transaction.FieldHash, transaction.FieldMemo:
 			values[i] = new(sql.NullString)
@@ -105,16 +107,16 @@ func (_m *Transaction) assignValues(columns []string, values []any) error {
 				_m.BlockHeight = int(value.Int64)
 			}
 		case transaction.FieldGasWanted:
-			if value, ok := values[i].(*sql.NullInt64); !ok {
+			if value, ok := values[i].(*sql.NullFloat64); !ok {
 				return fmt.Errorf("unexpected type %T for field gas_wanted", values[i])
 			} else if value.Valid {
-				_m.GasWanted = int(value.Int64)
+				_m.GasWanted = value.Float64
 			}
 		case transaction.FieldGasUsed:
-			if value, ok := values[i].(*sql.NullInt64); !ok {
+			if value, ok := values[i].(*sql.NullFloat64); !ok {
 				return fmt.Errorf("unexpected type %T for field gas_used", values[i])
 			} else if value.Valid {
-				_m.GasUsed = int(value.Int64)
+				_m.GasUsed = value.Float64
 			}
 		case transaction.FieldMemo:
 			if value, ok := values[i].(*sql.NullString); !ok {

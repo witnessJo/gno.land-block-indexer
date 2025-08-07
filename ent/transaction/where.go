@@ -75,12 +75,12 @@ func BlockHeight(v int) predicate.Transaction {
 }
 
 // GasWanted applies equality check predicate on the "gas_wanted" field. It's identical to GasWantedEQ.
-func GasWanted(v int) predicate.Transaction {
+func GasWanted(v float64) predicate.Transaction {
 	return predicate.Transaction(sql.FieldEQ(FieldGasWanted, v))
 }
 
 // GasUsed applies equality check predicate on the "gas_used" field. It's identical to GasUsedEQ.
-func GasUsed(v int) predicate.Transaction {
+func GasUsed(v float64) predicate.Transaction {
 	return predicate.Transaction(sql.FieldEQ(FieldGasUsed, v))
 }
 
@@ -250,82 +250,82 @@ func BlockHeightLTE(v int) predicate.Transaction {
 }
 
 // GasWantedEQ applies the EQ predicate on the "gas_wanted" field.
-func GasWantedEQ(v int) predicate.Transaction {
+func GasWantedEQ(v float64) predicate.Transaction {
 	return predicate.Transaction(sql.FieldEQ(FieldGasWanted, v))
 }
 
 // GasWantedNEQ applies the NEQ predicate on the "gas_wanted" field.
-func GasWantedNEQ(v int) predicate.Transaction {
+func GasWantedNEQ(v float64) predicate.Transaction {
 	return predicate.Transaction(sql.FieldNEQ(FieldGasWanted, v))
 }
 
 // GasWantedIn applies the In predicate on the "gas_wanted" field.
-func GasWantedIn(vs ...int) predicate.Transaction {
+func GasWantedIn(vs ...float64) predicate.Transaction {
 	return predicate.Transaction(sql.FieldIn(FieldGasWanted, vs...))
 }
 
 // GasWantedNotIn applies the NotIn predicate on the "gas_wanted" field.
-func GasWantedNotIn(vs ...int) predicate.Transaction {
+func GasWantedNotIn(vs ...float64) predicate.Transaction {
 	return predicate.Transaction(sql.FieldNotIn(FieldGasWanted, vs...))
 }
 
 // GasWantedGT applies the GT predicate on the "gas_wanted" field.
-func GasWantedGT(v int) predicate.Transaction {
+func GasWantedGT(v float64) predicate.Transaction {
 	return predicate.Transaction(sql.FieldGT(FieldGasWanted, v))
 }
 
 // GasWantedGTE applies the GTE predicate on the "gas_wanted" field.
-func GasWantedGTE(v int) predicate.Transaction {
+func GasWantedGTE(v float64) predicate.Transaction {
 	return predicate.Transaction(sql.FieldGTE(FieldGasWanted, v))
 }
 
 // GasWantedLT applies the LT predicate on the "gas_wanted" field.
-func GasWantedLT(v int) predicate.Transaction {
+func GasWantedLT(v float64) predicate.Transaction {
 	return predicate.Transaction(sql.FieldLT(FieldGasWanted, v))
 }
 
 // GasWantedLTE applies the LTE predicate on the "gas_wanted" field.
-func GasWantedLTE(v int) predicate.Transaction {
+func GasWantedLTE(v float64) predicate.Transaction {
 	return predicate.Transaction(sql.FieldLTE(FieldGasWanted, v))
 }
 
 // GasUsedEQ applies the EQ predicate on the "gas_used" field.
-func GasUsedEQ(v int) predicate.Transaction {
+func GasUsedEQ(v float64) predicate.Transaction {
 	return predicate.Transaction(sql.FieldEQ(FieldGasUsed, v))
 }
 
 // GasUsedNEQ applies the NEQ predicate on the "gas_used" field.
-func GasUsedNEQ(v int) predicate.Transaction {
+func GasUsedNEQ(v float64) predicate.Transaction {
 	return predicate.Transaction(sql.FieldNEQ(FieldGasUsed, v))
 }
 
 // GasUsedIn applies the In predicate on the "gas_used" field.
-func GasUsedIn(vs ...int) predicate.Transaction {
+func GasUsedIn(vs ...float64) predicate.Transaction {
 	return predicate.Transaction(sql.FieldIn(FieldGasUsed, vs...))
 }
 
 // GasUsedNotIn applies the NotIn predicate on the "gas_used" field.
-func GasUsedNotIn(vs ...int) predicate.Transaction {
+func GasUsedNotIn(vs ...float64) predicate.Transaction {
 	return predicate.Transaction(sql.FieldNotIn(FieldGasUsed, vs...))
 }
 
 // GasUsedGT applies the GT predicate on the "gas_used" field.
-func GasUsedGT(v int) predicate.Transaction {
+func GasUsedGT(v float64) predicate.Transaction {
 	return predicate.Transaction(sql.FieldGT(FieldGasUsed, v))
 }
 
 // GasUsedGTE applies the GTE predicate on the "gas_used" field.
-func GasUsedGTE(v int) predicate.Transaction {
+func GasUsedGTE(v float64) predicate.Transaction {
 	return predicate.Transaction(sql.FieldGTE(FieldGasUsed, v))
 }
 
 // GasUsedLT applies the LT predicate on the "gas_used" field.
-func GasUsedLT(v int) predicate.Transaction {
+func GasUsedLT(v float64) predicate.Transaction {
 	return predicate.Transaction(sql.FieldLT(FieldGasUsed, v))
 }
 
 // GasUsedLTE applies the LTE predicate on the "gas_used" field.
-func GasUsedLTE(v int) predicate.Transaction {
+func GasUsedLTE(v float64) predicate.Transaction {
 	return predicate.Transaction(sql.FieldLTE(FieldGasUsed, v))
 }
 

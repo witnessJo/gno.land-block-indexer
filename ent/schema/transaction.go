@@ -1,10 +1,9 @@
 package schema
 
 import (
-	"time"
-
 	"entgo.io/ent"
 	"entgo.io/ent/schema/field"
+	"time"
 )
 
 // Transaction holds the schema definition for the Transaction entity.
@@ -13,8 +12,8 @@ type Transaction struct {
 }
 
 type GasFee struct {
-	Amount string `json:"amount"` // Amount of gas fee
-	Denom  string `json:"denom"`  // Denomination of the gas fee
+	Amount float64 `json:"amount"` // Amount of gas fee
+	Denom  string  `json:"denom"`  // Denomination of the gas fee
 }
 type Message struct {
 	Route   string      `json:"route"`   // Route of the message
@@ -36,10 +35,10 @@ func (Transaction) Fields() []ent.Field {
 		field.String("hash").NotEmpty().Comment("Hash of the transaction"),
 		field.Bool("success").Default(false).Comment("Whether the transaction was successful"),
 		field.Int("block_height").Comment("Height of the block containing the transaction"),
-		field.Int("gas_wanted").Comment("Gas wanted for the transaction"),
-		field.Int("gas_used").Comment("Gas used by the transaction"),
+		field.Float("gas_wanted").Comment("Gas wanted for the transaction"),
+		field.Float("gas_used").Comment("Gas used by the transaction"),
 		field.String("memo").Optional().Comment("Memo of the transaction"),
-		field.JSON("gas_fee", []GasFee{}).Optional().Comment("Gas fee paid for the transaction"),
+		field.JSON("gas_fee", GasFee{}).Optional().Comment("Gas fee paid for the transaction"),
 		field.JSON("messages", []Message{}).Optional().Comment("Messages in the transaction"),
 		field.JSON("response", Response{}).Optional().Comment("Response of the transaction"),
 		field.Time("created_at").Default(time.Now()).Immutable().Comment("Creation time of the transaction"),

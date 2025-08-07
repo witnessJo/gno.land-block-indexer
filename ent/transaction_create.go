@@ -54,13 +54,13 @@ func (_c *TransactionCreate) SetBlockHeight(v int) *TransactionCreate {
 }
 
 // SetGasWanted sets the "gas_wanted" field.
-func (_c *TransactionCreate) SetGasWanted(v int) *TransactionCreate {
+func (_c *TransactionCreate) SetGasWanted(v float64) *TransactionCreate {
 	_c.mutation.SetGasWanted(v)
 	return _c
 }
 
 // SetGasUsed sets the "gas_used" field.
-func (_c *TransactionCreate) SetGasUsed(v int) *TransactionCreate {
+func (_c *TransactionCreate) SetGasUsed(v float64) *TransactionCreate {
 	_c.mutation.SetGasUsed(v)
 	return _c
 }
@@ -80,8 +80,16 @@ func (_c *TransactionCreate) SetNillableMemo(v *string) *TransactionCreate {
 }
 
 // SetGasFee sets the "gas_fee" field.
-func (_c *TransactionCreate) SetGasFee(v []schema.GasFee) *TransactionCreate {
+func (_c *TransactionCreate) SetGasFee(v schema.GasFee) *TransactionCreate {
 	_c.mutation.SetGasFee(v)
+	return _c
+}
+
+// SetNillableGasFee sets the "gas_fee" field if the given value is not nil.
+func (_c *TransactionCreate) SetNillableGasFee(v *schema.GasFee) *TransactionCreate {
+	if v != nil {
+		_c.SetGasFee(*v)
+	}
 	return _c
 }
 
@@ -235,11 +243,11 @@ func (_c *TransactionCreate) createSpec() (*Transaction, *sqlgraph.CreateSpec) {
 		_node.BlockHeight = value
 	}
 	if value, ok := _c.mutation.GasWanted(); ok {
-		_spec.SetField(transaction.FieldGasWanted, field.TypeInt, value)
+		_spec.SetField(transaction.FieldGasWanted, field.TypeFloat64, value)
 		_node.GasWanted = value
 	}
 	if value, ok := _c.mutation.GasUsed(); ok {
-		_spec.SetField(transaction.FieldGasUsed, field.TypeInt, value)
+		_spec.SetField(transaction.FieldGasUsed, field.TypeFloat64, value)
 		_node.GasUsed = value
 	}
 	if value, ok := _c.mutation.Memo(); ok {

@@ -3,4 +3,8 @@
 .projectile-cache.eld
 .dir-locals.el
 
+# binary directory
+bin
+
+
 
