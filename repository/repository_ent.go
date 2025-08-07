@@ -268,17 +268,6 @@ func convertResponseToSchema(modelResponse model.Response) schema.Response {
 	}
 }
 
-func convertSchemaGasFeeToModel(schemaGasFee []schema.GasFee) []model.GasFee {
-	modelGasFee := make([]model.GasFee, len(schemaGasFee))
-	for i, fee := range schemaGasFee {
-		modelGasFee[i] = model.GasFee{
-			Amount: fee.Amount,
-			Denom:  fee.Denom,
-		}
-	}
-	return modelGasFee
-}
-
 func convertSchemaMessagesToModel(schemaMessages []schema.Message) []model.Message {
 	modelMessages := make([]model.Message, len(schemaMessages))
 	for i, msg := range schemaMessages {
