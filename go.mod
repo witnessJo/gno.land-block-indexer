@@ -35,6 +35,7 @@ require (
 	github.com/go-openapi/inflect v0.19.0 // indirect
 	github.com/google/go-cmp v0.6.0 // indirect
 	github.com/google/uuid v1.3.0 // indirect
+	github.com/gorilla/websocket v1.5.3
 	github.com/hashicorp/hcl/v2 v2.18.1 // indirect
 	github.com/machinebox/graphql v0.2.2
 	github.com/mitchellh/go-wordwrap v1.0.1 // indirect

@@ -5,9 +5,13 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"net"
 	"net/http"
+	"net/url"
 	"time"
 
+	"github.com/google/uuid"
+	"github.com/gorilla/websocket"
 	"github.com/machinebox/graphql"
 	"gno.land-block-indexer/model"
 	"gno.land-block-indexer/repository"
@@ -24,44 +28,62 @@ type Service interface {
 	PushTransaction(transactions *model.Transaction) error
 
 	// poll operations (graphql)
-	PollHighestBlock() (*model.Block, error)
 	PollBlocks(offset int, limit int) ([]model.Block, error)
 	PollTransactions(blockOffset int, limit int) ([]model.Transaction, error)
 	SubscribeToBlocks(ctx context.Context, ch chan<- model.Block) error
 }
 
 type service struct {
-	repo   repository.Repository
-	client *graphql.Client
+	repo              repository.Repository
+	client            *graphql.Client
+	websocketEndpoint string
 }
 
 // GetHighestBlock implements Service.
 func (s *service) GetHighestBlock() (*model.Block, error) {
-	panic("unimplemented")
+	ctx := context.Background()
+	blocks, err := s.repo.GetBlocks(ctx, 0, 1) // Get only the highest block
+	if err != nil {
+		log.Printf("failed to get highest block: %v", err)
+		return nil, err
+	}
+
+	if len(blocks) == 0 {
+		return nil, fmt.Errorf("no blocks found in database")
+	}
+
+	return blocks[0], nil
 }
 
 type ServiceConfig struct {
-	GraphqlEndpoint string
-	EntConfig       repository.RepositoryEntConfig
+	FetchEndpoint     string
+	WebSocketEndpoint string
+	EntConfig         repository.RepositoryEntConfig
 }
 
 func NewService(config *ServiceConfig) Service {
 	repo := repository.NewRepositoryEnt(
 		&config.EntConfig,
 	)
-	client := graphql.NewClient(config.GraphqlEndpoint, graphql.WithHTTPClient(&http.Client{
+	client := graphql.NewClient(config.FetchEndpoint, graphql.WithHTTPClient(&http.Client{
 		Timeout: 30 * time.Second,
 	}))
 
-	return &service{
-		repo:   repo,
-		client: client,
+	fetchEndpoint := config.FetchEndpoint
+	if fetchEndpoint == "" {
+		fetchEndpoint = "https://indexer.onbloc.xyz/graphql/query"
 	}
-}
 
-// PollHighestBlock implements Service.
-func (s *service) PollHighestBlock() (*model.Block, error) {
-	panic("unimplemented")
+	websocketEndpoint := config.WebSocketEndpoint
+	if websocketEndpoint == "" {
+		websocketEndpoint = "wss://indexer.onbloc.xyz/graphql/query"
+	}
+
+	return &service{
+		repo:              repo,
+		client:            client,
+		websocketEndpoint: websocketEndpoint,
+	}
 }
 
 // PollBlocks implements Service.
@@ -258,9 +280,9 @@ func (s *service) PollTransactions(blockOffset int, limit int) ([]model.Transact
 			Memo        string       `json:"memo"`
 			GasFee      model.GasFee `json:"gas_fee"`
 			Messages    []struct {
-				Route   string      `json:"route"`
-				TypeUrl string      `json:"typeUrl"`
-				Value   interface{} `json:"value"` // 다양한 타입을 처리하기 위해 interface{} 사용
+				Route   string `json:"route"`
+				TypeUrl string `json:"typeUrl"`
+				Value   any    `json:"value"` // 다양한 타입을 처리하기 위해 interface{} 사용
 			} `json:"messages"`
 			Response struct {
 				Log    string `json:"log"`
@@ -341,9 +363,245 @@ func (s *service) PollTransactions(blockOffset int, limit int) ([]model.Transact
 	return transactions, nil
 }
 
-// SubscribeToBlocks implements Service.
 func (s *service) SubscribeToBlocks(ctx context.Context, ch chan<- model.Block) error {
-	panic("unimplemented")
+	fmt.Println("Connecting to WebSocket endpoint:", s.websocketEndpoint)
+	u, err := url.Parse(s.websocketEndpoint)
+	if err != nil {
+		return fmt.Errorf("failed to parse URL: %w", err)
+	}
+
+	// Use graphql-transport-ws protocol (Apollo's newer protocol)
+	dialer := websocket.Dialer{
+		Subprotocols: []string{"graphql-transport-ws"},
+	}
+
+	// Add headers to match browser behavior
+	header := http.Header{}
+	header.Add("Origin", "https://indexer.onbloc.xyz")
+	header.Add("User-Agent", "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Safari/537.36")
+
+	ws, resp, err := dialer.Dial(u.String(), header)
+	if err != nil {
+		return fmt.Errorf("failed to connect to WebSocket: %w", err)
+	}
+	defer ws.Close()
+
+	// Check which protocol was accepted
+	actualProtocol := resp.Header.Get("Sec-WebSocket-Protocol")
+	log.Printf("Server accepted protocol: %s", actualProtocol)
+
+	// Send connection init message (graphql-transport-ws doesn't require payload)
+	initMsg := map[string]any{
+		"type": "connection_init",
+	}
+
+	if err := ws.WriteJSON(initMsg); err != nil {
+		return fmt.Errorf("failed to send connection init: %w", err)
+	}
+	log.Printf("Sent connection_init")
+
+	// Wait for connection_ack
+	var ackMsg map[string]any
+	if err := ws.ReadJSON(&ackMsg); err != nil {
+		return fmt.Errorf("failed to read connection ack: %w", err)
+	}
+
+	if ackMsg["type"] != "connection_ack" {
+		return fmt.Errorf("expected connection_ack, got %v", ackMsg["type"])
+	}
+	log.Printf("Received connection_ack")
+
+	// Generate unique subscription ID
+	subscriptionID := uuid.New().String()
+
+	// GraphQL subscription query (exact format from your working example)
+	subscription := `subscription{
+  getBlocks(
+    where: {}
+  ) {
+    hash
+    height
+    time
+    total_txs
+    num_txs
+  }
+}`
+
+	// Build subscription message for graphql-transport-ws
+	subscribeMsg := map[string]any{
+		"id":   subscriptionID,
+		"type": "subscribe", // graphql-transport-ws uses "subscribe"
+		"payload": map[string]any{
+			"query": subscription,
+		},
+	}
+
+	data, _ := json.MarshalIndent(subscribeMsg, "", "  ")
+	log.Printf("Sending subscription message: %s", data)
+
+	if err := ws.WriteJSON(subscribeMsg); err != nil {
+		return fmt.Errorf("failed to send subscription: %w", err)
+	}
+	log.Printf("Subscription sent with ID: %s", subscriptionID)
+
+	// Statistics tracking
+	startTime := time.Now()
+	messageCount := 0
+	lastMessageTime := time.Now()
+
+	log.Printf("Starting message loop, waiting for real-time updates...")
+
+	// Handle messages in a loop
+	for {
+		select {
+		case <-ctx.Done():
+			// Send complete message before closing
+			completeMsg := map[string]any{
+				"id":   subscriptionID,
+				"type": "complete",
+			}
+			ws.WriteJSON(completeMsg)
+			return ctx.Err()
+
+		default:
+			// Set a longer read deadline to handle slow block generation
+			ws.SetReadDeadline(time.Now().Add(120 * time.Second))
+
+			var msg map[string]any
+			if err := ws.ReadJSON(&msg); err != nil {
+				if websocket.IsCloseError(err, websocket.CloseNormalClosure, websocket.CloseGoingAway) {
+					return nil
+				}
+				if netErr, ok := err.(net.Error); ok && netErr.Timeout() {
+					timeSinceLastMessage := time.Since(lastMessageTime)
+					log.Printf("No message for %v, total runtime: %v, messages received: %d",
+						timeSinceLastMessage, time.Since(startTime), messageCount)
+					// Don't return on timeout, just continue waiting
+					continue
+				}
+				return fmt.Errorf("failed to read WebSocket message: %w", err)
+			}
+
+			messageCount++
+			lastMessageTime = time.Now()
+
+			// Log full message for debugging
+			msgBytes, _ := json.Marshal(msg)
+			log.Printf("Received message: %s", string(msgBytes))
+
+			// Handle different message types
+			msgType, ok := msg["type"].(string)
+			if !ok {
+				log.Printf("Unknown message format: %v", msg)
+				continue
+			}
+
+			switch msgType {
+			case "ping":
+				// Respond to ping with pong
+				pongMsg := map[string]any{"type": "pong"}
+				if err := ws.WriteJSON(pongMsg); err != nil {
+					log.Printf("Failed to send pong: %v", err)
+				}
+				log.Printf("Sent pong")
+				continue
+
+			case "next": // graphql-transport-ws uses "next" for data
+				payload, ok := msg["payload"].(map[string]any)
+				if !ok {
+					log.Printf("Invalid payload in next message: %v", msg)
+					continue
+				}
+
+				// Check for errors first
+				if errors, ok := payload["errors"]; ok {
+					log.Printf("GraphQL errors: %v", errors)
+					continue
+				}
+
+				data, ok := payload["data"].(map[string]any)
+				if !ok {
+					log.Printf("No data in payload: %v", payload)
+					continue
+				}
+
+				// getBlocks should be a single object
+				getBlocks, ok := data["getBlocks"].(map[string]any)
+				if !ok {
+					log.Printf("No getBlocks in data: %v", data)
+					continue
+				}
+
+				// Parse time
+				timeStr, ok := getBlocks["time"].(string)
+				var parsedTime time.Time
+				if ok {
+					parsedTime, err = time.Parse(time.RFC3339, timeStr)
+					if err != nil {
+						// Try other time formats
+						parsedTime, err = time.Parse("2006-01-02T15:04:05Z", timeStr)
+						if err != nil {
+							log.Printf("Failed to parse time %s: %v", timeStr, err)
+						}
+					}
+				}
+
+				block := model.Block{
+					Hash:     getString(getBlocks, "hash"),
+					Height:   getInt(getBlocks, "height"),
+					Time:     parsedTime,
+					TotalTxs: getInt(getBlocks, "total_txs"),
+					NumTxs:   getInt(getBlocks, "num_txs"),
+				}
+
+				// Send block to channel
+				select {
+				case ch <- block:
+					log.Printf("✅ Block sent to channel: height=%d, hash=%s, time=%v",
+						block.Height, block.Hash, block.Time)
+					log.Printf("   Total blocks received: %d, Running for: %v",
+						messageCount, time.Since(startTime))
+				case <-ctx.Done():
+					return ctx.Err()
+				default:
+					log.Println("⚠️  Channel is full, skipping block")
+				}
+
+			case "error":
+				errPayload := msg["payload"]
+				log.Printf("Subscription error: %v", errPayload)
+				// Check if it's a fatal error
+				if id, ok := msg["id"]; ok && id == subscriptionID {
+					return fmt.Errorf("subscription error: %v", errPayload)
+				}
+
+			case "complete":
+				log.Println("Subscription completed")
+				return nil
+
+			default:
+				log.Printf("Unhandled message type: %s", msgType)
+			}
+		}
+	}
+}
+
+// Helper functions
+func getString(m map[string]any, key string) string {
+	if v, ok := m[key].(string); ok {
+		return v
+	}
+	return ""
+}
+
+func getInt(m map[string]any, key string) int {
+	if v, ok := m[key].(float64); ok {
+		return int(v)
+	}
+	if v, ok := m[key].(int); ok {
+		return v
+	}
+	return 0
 }
 
 // GetMissingBlocks implements Service.
