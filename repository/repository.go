@@ -12,6 +12,7 @@ type Repository interface {
 	AddBlocks(ctx context.Context, blocks []*model.Block) error
 	GetBlock(ctx context.Context, blockNum int) (*model.Block, error)
 	GetBlocks(ctx context.Context, offset int, limit int) ([]*model.Block, error)
+	GetHighestBlock(ctx context.Context) (*model.Block, error)
 
 	// transaction operations
 	AddTransaction(ctx context.Context, blockNum int, tx *model.Transaction) error

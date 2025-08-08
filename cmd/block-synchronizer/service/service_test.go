@@ -6,7 +6,6 @@ import (
 	"time"
 
 	// "time"
-
 	"gno.land-block-indexer/model"
 	"gno.land-block-indexer/repository"
 )
@@ -80,7 +79,7 @@ func TestSubscribeToBlocks(t *testing.T) {
 	service := GetTestService()
 
 	go func() {
-		err := service.SubscribeToBlocks(ctx, ch)
+		err := service.SubscribeLastestBlock(ctx, ch)
 		if err != nil && err != context.DeadlineExceeded {
 			t.Errorf("SubscribeToBlocks error: %v", err)
 		}

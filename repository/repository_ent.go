@@ -30,9 +30,13 @@ func NewRepositoryEnt(config *RepositoryEntConfig) Repository {
 		" password="+config.Password+
 		" dbname="+config.Database+
 		" sslmode=disable")
-
 	if err != nil {
 		panic("failed to connect to database: " + err.Error())
+	}
+
+	// create the schema if it doesn't exist
+	if err := client.Schema.Create(context.Background()); err != nil {
+		log.Fatalf("failed creating schema resources: %v", err)
 	}
 
 	return &RepositoryEnt{
@@ -42,6 +46,24 @@ func NewRepositoryEnt(config *RepositoryEntConfig) Repository {
 
 type RepositoryEnt struct {
 	client *ent.Client
+}
+
+// GetHighestBlock implements Repository.
+func (r *RepositoryEnt) GetHighestBlock(ctx context.Context) (*model.Block, error) {
+	entBlock, err := r.client.Block.Query().
+		Order(ent.Desc("height")).
+		First(ctx)
+	if err != nil {
+		log.Printf("failed to get highest block: %v", err)
+		return nil, err
+	}
+	return &model.Block{
+		Hash:     entBlock.Hash,
+		Height:   entBlock.Height,
+		Time:     entBlock.Time,
+		TotalTxs: entBlock.TotalTxs,
+		NumTxs:   entBlock.NumTxs,
+	}, nil
 }
 
 // AddBlock implements Repository.

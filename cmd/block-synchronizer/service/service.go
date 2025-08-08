@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"log"
 	"net"
 	"net/http"
 	"net/url"
@@ -13,61 +12,60 @@ import (
 	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
 	"github.com/machinebox/graphql"
+	"gno.land-block-indexer/externals/msgbroker"
+	"gno.land-block-indexer/lib/log"
 	"gno.land-block-indexer/model"
 	"gno.land-block-indexer/repository"
 )
 
+const (
+	topicBlockWithTransactions = "block_with_transactions"
+)
+
 type Service interface {
+	// usecases (from controller)
+	RestoreMissingBlockAndTransactions(ctx context.Context, blockHeight int) error
+	SubscribeAndPush() error
+
 	// repository operations
 	GetMissingBlocks() ([]model.Block, error)
 	GetBlocksMissingTxCount() ([]model.Block, error)
 	GetHighestBlock() (*model.Block, error)
 
-	// queue operations
-	PushBlock(block *model.Block) error
-	PushTransaction(transactions *model.Transaction) error
-
 	// poll operations (graphql)
 	PollBlocks(offset int, limit int) ([]model.Block, error)
 	PollTransactions(blockOffset int, limit int) ([]model.Transaction, error)
-	SubscribeToBlocks(ctx context.Context, ch chan<- model.Block) error
+	SubscribeLastestBlock(ctx context.Context, ch chan<- model.Block) error
 }
 
 type service struct {
+	logger            log.Logger
 	repo              repository.Repository
+	localStack        msgbroker.MsgBroker
 	client            *graphql.Client
 	websocketEndpoint string
-}
-
-// GetHighestBlock implements Service.
-func (s *service) GetHighestBlock() (*model.Block, error) {
-	ctx := context.Background()
-	blocks, err := s.repo.GetBlocks(ctx, 0, 1) // Get only the highest block
-	if err != nil {
-		log.Printf("failed to get highest block: %v", err)
-		return nil, err
-	}
-
-	if len(blocks) == 0 {
-		return nil, fmt.Errorf("no blocks found in database")
-	}
-
-	return blocks[0], nil
 }
 
 type ServiceConfig struct {
 	FetchEndpoint     string
 	WebSocketEndpoint string
-	EntConfig         repository.RepositoryEntConfig
+	EntConfig         *repository.RepositoryEntConfig
+	LocalStackConfig  *msgbroker.LocalStackConfig
 }
 
-func NewService(config *ServiceConfig) Service {
+func NewService(ctx context.Context, logger log.Logger, config *ServiceConfig) Service {
 	repo := repository.NewRepositoryEnt(
-		&config.EntConfig,
+		config.EntConfig,
 	)
 	client := graphql.NewClient(config.FetchEndpoint, graphql.WithHTTPClient(&http.Client{
 		Timeout: 30 * time.Second,
 	}))
+
+	// Set default endpoints if not provided
+	localStack, err := msgbroker.NewMsgBrokerLocalStack(ctx, config.LocalStackConfig)
+	if err != nil {
+		log.Fatalf("failed to create local stack: %v", err)
+	}
 
 	fetchEndpoint := config.FetchEndpoint
 	if fetchEndpoint == "" {
@@ -80,10 +78,82 @@ func NewService(config *ServiceConfig) Service {
 	}
 
 	return &service{
+		logger:            logger,
 		repo:              repo,
 		client:            client,
 		websocketEndpoint: websocketEndpoint,
+		localStack:        localStack,
 	}
+}
+
+// RestoreMissingBlockAndTransactions implements Service.
+func (s *service) RestoreMissingBlockAndTransactions(ctx context.Context, blockHeight int) error {
+	panic("unimplemented")
+}
+
+// SubscribeAndPush implements Service.
+func (s *service) SubscribeAndPush() error {
+	ctx := context.Background()
+	ch := make(chan model.Block, 100)
+
+	// Start the subscription in a goroutine
+	go func() {
+		if err := s.SubscribeLastestBlock(ctx, ch); err != nil {
+			s.logger.Infof("failed to subscribe to latest block: %v", err)
+		}
+	}()
+
+	for {
+		select {
+		case <-ctx.Done():
+			s.logger.Infof("context done, stopping subscription")
+			close(ch)
+			return ctx.Err()
+		case block, ok := <-ch:
+			if !ok {
+				s.logger.Infof("channel closed, stopping subscription")
+				return nil
+			}
+
+			go func() {
+				transactions, err := s.PollTransactions(block.Height, 1) // Poll transactions for the block
+				if err != nil {
+					s.logger.Infof("failed to poll transactions for block %d: %v", block.Height, err)
+					return
+				}
+				blockMessage := msgbroker.BlockWithTransactions{
+					Block:        &block,
+					Transactions: transactions,
+				}
+				msgBytes, err := json.Marshal(blockMessage) // Ensure the blockMessage is marshaled to JSON
+				if err != nil {
+					s.logger.Infof("failed to marshal block with transactions: %v", err)
+					return
+				}
+
+				if err := s.localStack.Publish(topicBlockWithTransactions, msgBytes); err != nil {
+					s.logger.Infof("failed to publish block with transactions: %v", err)
+					return
+				}
+			}()
+		}
+	}
+}
+
+// GetHighestBlock implements Service.
+func (s *service) GetHighestBlock() (*model.Block, error) {
+	ctx := context.Background()
+	blocks, err := s.repo.GetBlocks(ctx, 0, 1) // Get only the highest block
+	if err != nil {
+		s.logger.Infof("failed to get highest block: %v", err)
+		return nil, err
+	}
+
+	if len(blocks) == 0 {
+		return nil, fmt.Errorf("no blocks found in database")
+	}
+
+	return blocks[0], nil
 }
 
 // PollBlocks implements Service.
@@ -135,7 +205,7 @@ func (s *service) PollBlocks(offset int, limit int) ([]model.Block, error) {
 
 		parsedTime, err := time.Parse(time.RFC3339, b.Time)
 		if err != nil {
-			log.Printf("failed to parse time: %v", err)
+			s.logger.Infof("failed to parse time %s: %v", b.Time, err)
 			parsedTime = time.Time{}
 		}
 
@@ -363,7 +433,7 @@ func (s *service) PollTransactions(blockOffset int, limit int) ([]model.Transact
 	return transactions, nil
 }
 
-func (s *service) SubscribeToBlocks(ctx context.Context, ch chan<- model.Block) error {
+func (s *service) SubscribeLastestBlock(ctx context.Context, ch chan<- model.Block) error {
 	fmt.Println("Connecting to WebSocket endpoint:", s.websocketEndpoint)
 	u, err := url.Parse(s.websocketEndpoint)
 	if err != nil {
@@ -388,7 +458,7 @@ func (s *service) SubscribeToBlocks(ctx context.Context, ch chan<- model.Block) 
 
 	// Check which protocol was accepted
 	actualProtocol := resp.Header.Get("Sec-WebSocket-Protocol")
-	log.Printf("Server accepted protocol: %s", actualProtocol)
+	s.logger.Infof("WebSocket connection established with protocol: %s", actualProtocol)
 
 	// Send connection init message (graphql-transport-ws doesn't require payload)
 	initMsg := map[string]any{
@@ -398,7 +468,7 @@ func (s *service) SubscribeToBlocks(ctx context.Context, ch chan<- model.Block) 
 	if err := ws.WriteJSON(initMsg); err != nil {
 		return fmt.Errorf("failed to send connection init: %w", err)
 	}
-	log.Printf("Sent connection_init")
+	s.logger.Infof("Sent connection_init message")
 
 	// Wait for connection_ack
 	var ackMsg map[string]any
@@ -409,7 +479,7 @@ func (s *service) SubscribeToBlocks(ctx context.Context, ch chan<- model.Block) 
 	if ackMsg["type"] != "connection_ack" {
 		return fmt.Errorf("expected connection_ack, got %v", ackMsg["type"])
 	}
-	log.Printf("Received connection_ack")
+	s.logger.Infof("Received connection_ack message")
 
 	// Generate unique subscription ID
 	subscriptionID := uuid.New().String()
@@ -437,19 +507,16 @@ func (s *service) SubscribeToBlocks(ctx context.Context, ch chan<- model.Block) 
 	}
 
 	data, _ := json.MarshalIndent(subscribeMsg, "", "  ")
-	log.Printf("Sending subscription message: %s", data)
+	s.logger.Infof("Sending subscription message: %s", string(data))
 
 	if err := ws.WriteJSON(subscribeMsg); err != nil {
 		return fmt.Errorf("failed to send subscription: %w", err)
 	}
-	log.Printf("Subscription sent with ID: %s", subscriptionID)
-
+	s.logger.Infof("Sent subscription message with ID: %s", subscriptionID)
 	// Statistics tracking
 	startTime := time.Now()
 	messageCount := 0
 	lastMessageTime := time.Now()
-
-	log.Printf("Starting message loop, waiting for real-time updates...")
 
 	// Handle messages in a loop
 	for {
@@ -474,7 +541,7 @@ func (s *service) SubscribeToBlocks(ctx context.Context, ch chan<- model.Block) 
 				}
 				if netErr, ok := err.(net.Error); ok && netErr.Timeout() {
 					timeSinceLastMessage := time.Since(lastMessageTime)
-					log.Printf("No message for %v, total runtime: %v, messages received: %d",
+					s.logger.Infof("Read timeout after %v, total time: %v, message count: %d",
 						timeSinceLastMessage, time.Since(startTime), messageCount)
 					// Don't return on timeout, just continue waiting
 					continue
@@ -487,12 +554,12 @@ func (s *service) SubscribeToBlocks(ctx context.Context, ch chan<- model.Block) 
 
 			// Log full message for debugging
 			msgBytes, _ := json.Marshal(msg)
-			log.Printf("Received message: %s", string(msgBytes))
+			s.logger.Infof("Received message: %s", string(msgBytes))
 
 			// Handle different message types
 			msgType, ok := msg["type"].(string)
 			if !ok {
-				log.Printf("Unknown message format: %v", msg)
+				s.logger.Infof("Received message without type: %v", msg)
 				continue
 			}
 
@@ -501,34 +568,34 @@ func (s *service) SubscribeToBlocks(ctx context.Context, ch chan<- model.Block) 
 				// Respond to ping with pong
 				pongMsg := map[string]any{"type": "pong"}
 				if err := ws.WriteJSON(pongMsg); err != nil {
-					log.Printf("Failed to send pong: %v", err)
+					return s.logger.Errorf("failed to send pong: %v", err)
 				}
-				log.Printf("Sent pong")
+				s.logger.Infof("Received ping, sent pong")
 				continue
 
 			case "next": // graphql-transport-ws uses "next" for data
 				payload, ok := msg["payload"].(map[string]any)
 				if !ok {
-					log.Printf("Invalid payload in next message: %v", msg)
+					s.logger.Infof("Received next message without payload: %v", msg)
 					continue
 				}
 
 				// Check for errors first
 				if errors, ok := payload["errors"]; ok {
-					log.Printf("GraphQL errors: %v", errors)
+					s.logger.Infof("Received errors in next message: %v", errors)
 					continue
 				}
 
 				data, ok := payload["data"].(map[string]any)
 				if !ok {
-					log.Printf("No data in payload: %v", payload)
+					s.logger.Infof("Received next message without data: %v", payload)
 					continue
 				}
 
 				// getBlocks should be a single object
 				getBlocks, ok := data["getBlocks"].(map[string]any)
 				if !ok {
-					log.Printf("No getBlocks in data: %v", data)
+					s.logger.Infof("Received next message without getBlocks: %v", data)
 					continue
 				}
 
@@ -541,7 +608,10 @@ func (s *service) SubscribeToBlocks(ctx context.Context, ch chan<- model.Block) 
 						// Try other time formats
 						parsedTime, err = time.Parse("2006-01-02T15:04:05Z", timeStr)
 						if err != nil {
-							log.Printf("Failed to parse time %s: %v", timeStr, err)
+							s.logger.Infof("Failed to parse time %s: %v", timeStr, err)
+							parsedTime = time.Time{} // Use zero value if parsing fails
+						} else {
+							s.logger.Infof("Parsed time: %v", parsedTime)
 						}
 					}
 				}
@@ -557,30 +627,30 @@ func (s *service) SubscribeToBlocks(ctx context.Context, ch chan<- model.Block) 
 				// Send block to channel
 				select {
 				case ch <- block:
-					log.Printf("✅ Block sent to channel: height=%d, hash=%s, time=%v",
+					s.logger.Infof("Received block: Height=%d, Hash=%s, Time=%s",
 						block.Height, block.Hash, block.Time)
-					log.Printf("   Total blocks received: %d, Running for: %v",
+					s.logger.Infof("Total messages received: %d, Time elapsed: %v",
 						messageCount, time.Since(startTime))
 				case <-ctx.Done():
 					return ctx.Err()
 				default:
-					log.Println("⚠️  Channel is full, skipping block")
+					s.logger.Infof("Channel is full, dropping block: Height=%d, Hash=%s, Time=%s",
+						block.Height, block.Hash, block.Time)
 				}
 
 			case "error":
+				s.logger.Errorf("Received error message: %v", msg)
 				errPayload := msg["payload"]
-				log.Printf("Subscription error: %v", errPayload)
-				// Check if it's a fatal error
 				if id, ok := msg["id"]; ok && id == subscriptionID {
 					return fmt.Errorf("subscription error: %v", errPayload)
 				}
 
 			case "complete":
-				log.Println("Subscription completed")
+				s.logger.Infof("Subscription complete for ID: %s", subscriptionID)
 				return nil
 
 			default:
-				log.Printf("Unhandled message type: %s", msgType)
+				s.logger.Infof("Received unknown message type: %s, content: %v", msgType, msg)
 			}
 		}
 	}
@@ -609,7 +679,7 @@ func (s *service) GetMissingBlocks() ([]model.Block, error) {
 	ctx := context.Background()
 	blocks, err := s.repo.GetBlocks(ctx, 0, 100)
 	if err != nil {
-		log.Printf("failed to get missing blocks: %v", err)
+		s.logger.Infof("failed to get blocks: %v", err)
 		return nil, err
 	}
 
@@ -625,7 +695,7 @@ func (s *service) GetBlocksMissingTxCount() ([]model.Block, error) {
 	ctx := context.Background()
 	blocks, err := s.repo.GetBlocks(ctx, 0, 100)
 	if err != nil {
-		log.Printf("failed to get blocks missing tx count: %v", err)
+		s.logger.Infof("failed to get blocks: %v", err)
 		return nil, err
 	}
 
@@ -636,26 +706,4 @@ func (s *service) GetBlocksMissingTxCount() ([]model.Block, error) {
 		}
 	}
 	return missingTxBlocks, nil
-}
-
-// PushBlock implements Service.
-func (s *service) PushBlock(block *model.Block) error {
-	ctx := context.Background()
-	err := s.repo.AddBlock(ctx, block)
-	if err != nil {
-		log.Printf("failed to push block: %v", err)
-		return err
-	}
-	return nil
-}
-
-// PushTransaction implements Service.
-func (s *service) PushTransaction(transaction *model.Transaction) error {
-	ctx := context.Background()
-	err := s.repo.AddTransaction(ctx, transaction.BlockHeight, transaction)
-	if err != nil {
-		log.Printf("failed to push transaction: %v", err)
-		return err
-	}
-	return nil
 }

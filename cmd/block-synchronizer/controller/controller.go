@@ -3,65 +3,45 @@ package controller
 import (
 	"context"
 
-	"github.com/graphql-go/graphql"
 	"gno.land-block-indexer/cmd/block-synchronizer/service"
-	"gno.land-block-indexer/model"
+	"gno.land-block-indexer/externals/msgbroker"
+	"gno.land-block-indexer/lib/log"
 	"gno.land-block-indexer/repository"
 )
 
 type Controller struct {
-	schema  *graphql.Schema
 	service service.Service
 }
 
 type ControllerConfig struct {
-	Schema     *graphql.Schema
 	repoConfig *repository.RepositoryEntConfig
 }
 
 func NewController() *Controller {
-	return &Controller{}
+	ctx := context.Background()
+	logger := log.NewLogger()
+	service := service.NewService(ctx, logger, &service.ServiceConfig{
+		FetchEndpoint:     "https://indexer.onbloc.xyz/graphql/query",
+		WebSocketEndpoint: "wss://indexer.onbloc.xyz/graphql/query",
+		EntConfig: &repository.RepositoryEntConfig{
+			Host:     "localhost",
+			Port:     5432,
+			User:     "postgres",
+			Password: "postgres",
+			Database: "postgres",
+		},
+		LocalStackConfig: &msgbroker.LocalStackConfig{
+			Endpoint: "localhost:4566",
+			Region:   "us-east-1",
+		},
+	})
+
+	return &Controller{
+		service: service,
+	}
 }
 
 func (c *Controller) Run(ctx context.Context) error {
-	// TODO: Implement controller logic
-	// check missing blocks and transactions
-	go func() {
-		for {
-			ch := make(chan model.Block)
-			err := c.service.SubscribeToBlocks(ctx, ch)
-			if err != nil {
-				// Handle error (e.g., log it, retry, etc.)
-				return
-			}
-			select {
-			case block := <-ch:
-				// Process the block received from the subscription
-				err = c.service.PushBlock(&block)
-				if err != nil {
-					// Handle error (e.g., log it, retry, etc.)
-					return
-				}
-				transactions, err := c.service.PollTransactions(block.Height, 1)
-				if err != nil {
-					// Handle error (e.g., log it, retry, etc.)
-					return
-				}
-
-				for _, tx := range transactions {
-					err = c.service.PushTransaction(&tx)
-					if err != nil {
-						// Handle error (e.g., log it, retry, etc.)
-						return
-					}
-				}
-
-			case <-ctx.Done():
-				// Context cancelled, exit the loop
-				return
-			}
-		}
-	}()
-
+	go c.service.SubscribeAndPush()
 	return nil
 }
