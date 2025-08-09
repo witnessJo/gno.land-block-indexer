@@ -2,7 +2,7 @@ package main
 
 import (
 	"context"
-	"gno.land-block-indexer/cmd/block-synchronizer/controller"
+	"gno.land-block-indexer/cmd/event-processor/controller"
 )
 
 func main() {

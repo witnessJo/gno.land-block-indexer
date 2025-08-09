@@ -19,7 +19,7 @@ import (
 )
 
 const (
-	topicBlockWithTransactions = "block_with_transactions"
+	topicBlockWithTxs = "block_with_txs"
 )
 
 type Service interface {
@@ -131,7 +131,7 @@ func (s *service) SubscribeAndPush() error {
 					return
 				}
 
-				if err := s.localStack.Publish(topicBlockWithTransactions, msgBytes); err != nil {
+				if err := s.localStack.Publish(topicBlockWithTxs, msgBytes); err != nil {
 					s.logger.Infof("failed to publish block with transactions: %v", err)
 					return
 				}
@@ -153,7 +153,7 @@ func (s *service) GetHighestBlock() (*model.Block, error) {
 		return nil, fmt.Errorf("no blocks found in database")
 	}
 
-	return blocks[0], nil
+	return &blocks[0], nil
 }
 
 // PollBlocks implements Service.
@@ -685,7 +685,7 @@ func (s *service) GetMissingBlocks() ([]model.Block, error) {
 
 	result := make([]model.Block, len(blocks))
 	for i, block := range blocks {
-		result[i] = *block
+		result[i] = block
 	}
 	return result, nil
 }
@@ -702,7 +702,7 @@ func (s *service) GetBlocksMissingTxCount() ([]model.Block, error) {
 	var missingTxBlocks []model.Block
 	for _, block := range blocks {
 		if block.NumTxs == 0 && block.TotalTxs > 0 {
-			missingTxBlocks = append(missingTxBlocks, *block)
+			missingTxBlocks = append(missingTxBlocks, block)
 		}
 	}
 	return missingTxBlocks, nil

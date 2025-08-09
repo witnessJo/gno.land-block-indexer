@@ -136,7 +136,7 @@ func (r *RepositoryEnt) AddTransaction(ctx context.Context, blockNum int, tx *mo
 }
 
 // AddTransactions implements Repository.
-func (r *RepositoryEnt) AddTransactions(ctx context.Context, blockNum int, txs []*model.Transaction) error {
+func (r *RepositoryEnt) AddTransactions(ctx context.Context, blockNum int, txs []model.Transaction) error {
 	if len(txs) == 0 {
 		return nil
 	}
@@ -186,7 +186,7 @@ func (r *RepositoryEnt) GetBlock(ctx context.Context, blockNum int) (*model.Bloc
 }
 
 // GetBlocks implements Repository.
-func (r *RepositoryEnt) GetBlocks(ctx context.Context, offset int, limit int) ([]*model.Block, error) {
+func (r *RepositoryEnt) GetBlocks(ctx context.Context, offset int, limit int) ([]model.Block, error) {
 	entBlocks, err := r.client.Block.Query().
 		Offset(offset).
 		Limit(limit).
@@ -197,9 +197,9 @@ func (r *RepositoryEnt) GetBlocks(ctx context.Context, offset int, limit int) ([
 		return nil, err
 	}
 
-	blocks := make([]*model.Block, len(entBlocks))
+	blocks := make([]model.Block, len(entBlocks))
 	for i, entBlock := range entBlocks {
-		blocks[i] = &model.Block{
+		blocks[i] = model.Block{
 			Hash:     entBlock.Hash,
 			Height:   entBlock.Height,
 			Time:     entBlock.Time,
@@ -236,7 +236,7 @@ func (r *RepositoryEnt) GetTransaction(ctx context.Context, txHash string) (*mod
 }
 
 // GetTransactions implements Repository.
-func (r *RepositoryEnt) GetTransactions(ctx context.Context, blockNum int, offset int, limit int) ([]*model.Transaction, error) {
+func (r *RepositoryEnt) GetTransactions(ctx context.Context, blockNum int, offset int, limit int) ([]model.Transaction, error) {
 	entTxs, err := r.client.Transaction.Query().
 		Where(transaction.BlockHeightEQ(blockNum)).
 		Offset(offset).
@@ -248,9 +248,9 @@ func (r *RepositoryEnt) GetTransactions(ctx context.Context, blockNum int, offse
 		return nil, err
 	}
 
-	txs := make([]*model.Transaction, len(entTxs))
+	txs := make([]model.Transaction, len(entTxs))
 	for i, entTx := range entTxs {
-		txs[i] = &model.Transaction{
+		txs[i] = model.Transaction{
 			Index:       entTx.Index,
 			Hash:        entTx.Hash,
 			Success:     entTx.Success,

@@ -2,7 +2,8 @@ package controller
 
 import (
 	"context"
-	"gno.land-block-indexer/cmd/block-synchronizer/service"
+
+	"gno.land-block-indexer/cmd/event-processor/service"
 	"gno.land-block-indexer/externals/msgbroker"
 	"gno.land-block-indexer/lib/log"
 	"gno.land-block-indexer/repository"
@@ -20,8 +21,6 @@ func NewController() *Controller {
 	ctx := context.Background()
 	logger := log.NewLogger()
 	service := service.NewService(ctx, logger, &service.ServiceConfig{
-		FetchEndpoint:     "https://indexer.onbloc.xyz/graphql/query",
-		WebSocketEndpoint: "wss://indexer.onbloc.xyz/graphql/query",
 		EntConfig: &repository.RepositoryEntConfig{
 			Host:     "localhost",
 			Port:     5432,
@@ -41,6 +40,6 @@ func NewController() *Controller {
 }
 
 func (c *Controller) Run(ctx context.Context) error {
-	go c.service.SubscribeAndPush()
+	go c.service.SubscribeAndHandle(ctx)
 	return nil
 }
