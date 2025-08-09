@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"log"
 	"sync"
 	"time"
 
@@ -14,6 +13,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/sns"
 	"github.com/aws/aws-sdk-go-v2/service/sqs"
 	"github.com/aws/aws-sdk-go-v2/service/sqs/types"
+	"gno.land-block-indexer/lib/log"
 )
 
 // Config for LocalStack connection
@@ -24,6 +24,7 @@ type LocalStackConfig struct {
 
 type msgBrokerLocalstack struct {
 	ctx    context.Context
+	logger log.Logger
 	cancel context.CancelFunc
 	config LocalStackConfig
 
@@ -38,7 +39,7 @@ type msgBrokerLocalstack struct {
 }
 
 // NewMsgBrokerLocalStack creates a new message broker using LocalStack running in Docker
-func NewMsgBrokerLocalStack(ctx context.Context, cfg *LocalStackConfig) (MsgBroker, error) {
+func NewMsgBrokerLocalStack(ctx context.Context, logger log.Logger, cfg *LocalStackConfig) (MsgBroker, error) {
 	// Default configuration
 	if cfg == nil {
 		cfg = &LocalStackConfig{
@@ -82,6 +83,7 @@ func NewMsgBrokerLocalStack(ctx context.Context, cfg *LocalStackConfig) (MsgBrok
 
 	broker := &msgBrokerLocalstack{
 		ctx:         ctx,
+		logger:      logger,
 		cancel:      cancel,
 		config:      *cfg,
 		sqsClient:   sqs.NewFromConfig(awsCfg),
@@ -117,7 +119,7 @@ func (m *msgBrokerLocalstack) testConnection() error {
 		return fmt.Errorf("SQS service not accessible: %w", err)
 	}
 
-	log.Printf("Successfully connected to LocalStack at %s", m.config.Endpoint)
+	log.Infof("Successfully connected to LocalStack at %s", m.config.Endpoint)
 	return nil
 }
 
@@ -135,7 +137,7 @@ func (m *msgBrokerLocalstack) Publish(topic string, message []byte) error {
 			return fmt.Errorf("failed to create topic %s: %w", topic, err)
 		}
 		m.topicArns[topic] = topicArn
-		log.Printf("Created SNS topic: %s with ARN: %s", topic, topicArn)
+		log.Infof("Created SNS topic: %s with ARN: %s", topic, topicArn)
 	}
 
 	// 메시지 발행
@@ -147,7 +149,7 @@ func (m *msgBrokerLocalstack) Publish(topic string, message []byte) error {
 		return fmt.Errorf("failed to publish message to topic %s: %w", topic, err)
 	}
 
-	log.Printf("Published message to topic %s, MessageId: %s", topic, *output.MessageId)
+	log.Infof("Published message to topic %s, MessageId: %s", topic, *output.MessageId)
 	return nil
 }
 
@@ -165,7 +167,7 @@ func (m *msgBrokerLocalstack) Subscribe(topic string, handler func(message []byt
 			return fmt.Errorf("failed to create topic %s: %w", topic, err)
 		}
 		m.topicArns[topic] = topicArn
-		log.Printf("Created SNS topic: %s with ARN: %s", topic, topicArn)
+		log.Infof("Created SNS topic: %s with ARN: %s", topic, topicArn)
 	}
 
 	// Queue 생성 (각 구독자마다 고유한 queue)
@@ -175,13 +177,13 @@ func (m *msgBrokerLocalstack) Subscribe(topic string, handler func(message []byt
 		return fmt.Errorf("failed to create queue for topic %s: %w", topic, err)
 	}
 	m.queueUrls[queueName] = queueUrl
-	log.Printf("Created SQS queue: %s with URL: %s", queueName, queueUrl)
+	log.Infof("Created SQS queue: %s with URL: %s", queueName, queueUrl)
 
 	// Topic을 Queue에 구독
 	if err := m.subscribeQueueToTopic(topicArn, queueUrl); err != nil {
 		return fmt.Errorf("failed to subscribe queue to topic %s: %w", topic, err)
 	}
-	log.Printf("Subscribed queue %s to topic %s", queueName, topic)
+	log.Infof("Subscribed queue %s to topic %s", queueName, topic)
 
 	// 핸들러 등록
 	m.subscribers[topic] = append(m.subscribers[topic], handler)
@@ -274,18 +276,18 @@ func (m *msgBrokerLocalstack) subscribeQueueToTopic(topicArn, queueUrl string) e
 		return fmt.Errorf("failed to subscribe to topic: %w", err)
 	}
 
-	log.Printf("Created subscription: %s", *subscribeOutput.SubscriptionArn)
+	log.Infof("Created subscription: %s", *subscribeOutput.SubscriptionArn)
 	return nil
 }
 
 func (m *msgBrokerLocalstack) pollMessages(topic, queueUrl string, handler func(message []byte) error) {
 	defer m.pollersWg.Done()
-	log.Printf("Starting message poller for topic: %s, queue: %s", topic, queueUrl)
+	log.Infof("Starting message poller for topic: %s, queue: %s", topic, queueUrl)
 
 	for {
 		select {
 		case <-m.ctx.Done():
-			log.Printf("Stopping message poller for topic: %s", topic)
+			log.Infof("Stopping message poller for topic: %s", topic)
 			return
 		default:
 			// SQS에서 메시지 수신 (Long Polling 사용)
@@ -299,13 +301,13 @@ func (m *msgBrokerLocalstack) pollMessages(topic, queueUrl string, handler func(
 				if m.ctx.Err() != nil {
 					return // Context cancelled
 				}
-				log.Printf("Error receiving messages from queue %s: %v", queueUrl, err)
+				log.Infof("Error receiving messages from queue %s: %v", queueUrl, err)
 				time.Sleep(1 * time.Second)
 				continue
 			}
 
 			if len(output.Messages) > 0 {
-				log.Printf("Received %d messages from queue for topic %s", len(output.Messages), topic)
+				log.Infof("Received %d messages from queue for topic %s", len(output.Messages), topic)
 			}
 
 			for _, msg := range output.Messages {
@@ -332,16 +334,16 @@ func (m *msgBrokerLocalstack) processMessage(topic, queueUrl string, msg types.M
 	messageBody := ""
 	if err := json.Unmarshal([]byte(*msg.Body), &snsMessage); err != nil {
 		// SNS 메시지가 아닌 경우 직접 사용
-		log.Printf("Message is not SNS formatted, using raw body")
+		log.Infof("Message is not SNS formatted, using raw body")
 		messageBody = *msg.Body
 	} else {
 		messageBody = snsMessage.Message
-		log.Printf("Processing SNS message: Type=%s, MessageId=%s", snsMessage.Type, snsMessage.MessageId)
+		log.Infof("Processing SNS message: Type=%s, MessageId=%s", snsMessage.Type, snsMessage.MessageId)
 	}
 
 	// 핸들러 실행
 	if err := handler([]byte(messageBody)); err != nil {
-		log.Printf("Error handling message for topic %s: %v", topic, err)
+		log.Infof("Error handling message for topic %s: %v", topic, err)
 		// 에러 발생 시 메시지를 삭제하지 않고 리턴 (재시도를 위해)
 		return
 	}
@@ -352,15 +354,15 @@ func (m *msgBrokerLocalstack) processMessage(topic, queueUrl string, msg types.M
 		ReceiptHandle: msg.ReceiptHandle,
 	})
 	if err != nil {
-		log.Printf("Error deleting message from queue %s: %v", queueUrl, err)
+		log.Infof("Error deleting message from queue %s: %v", queueUrl, err)
 	} else {
-		log.Printf("Successfully processed and deleted message for topic %s", topic)
+		log.Infof("Successfully processed and deleted message for topic %s", topic)
 	}
 }
 
 // Close gracefully shuts down the message broker
 func (m *msgBrokerLocalstack) Close() error {
-	log.Println("Closing message broker...")
+	log.Infof("Closing message broker...")
 
 	// Cancel context to stop all pollers
 	m.cancel()
@@ -374,16 +376,16 @@ func (m *msgBrokerLocalstack) Close() error {
 
 	select {
 	case <-done:
-		log.Println("All message pollers stopped successfully")
+		log.Infof("All message pollers stopped successfully")
 	case <-time.After(30 * time.Second):
-		log.Println("Timeout waiting for pollers to stop")
+		log.Infof("Timeout waiting for pollers to stop")
 	}
 
 	// Clean up resources (optional: delete queues and topics)
 	// This is commented out as you might want to keep them for debugging
 	// m.cleanup()
 
-	log.Println("Message broker closed")
+	log.Infof("Message broker closed")
 	return nil
 }
 
@@ -397,9 +399,9 @@ func (m *msgBrokerLocalstack) cleanup() {
 		if _, err := m.sqsClient.DeleteQueue(context.Background(), &sqs.DeleteQueueInput{
 			QueueUrl: aws.String(queueUrl),
 		}); err != nil {
-			log.Printf("Failed to delete queue %s: %v", queueName, err)
+			log.Infof("Failed to delete queue %s: %v", queueName, err)
 		} else {
-			log.Printf("Deleted queue: %s", queueName)
+			log.Infof("Deleted queue: %s", queueName)
 		}
 	}
 
@@ -408,9 +410,9 @@ func (m *msgBrokerLocalstack) cleanup() {
 		if _, err := m.snsClient.DeleteTopic(context.Background(), &sns.DeleteTopicInput{
 			TopicArn: aws.String(topicArn),
 		}); err != nil {
-			log.Printf("Failed to delete topic %s: %v", topicName, err)
+			log.Infof("Failed to delete topic %s: %v", topicName, err)
 		} else {
-			log.Printf("Deleted topic: %s", topicName)
+			log.Infof("Deleted topic: %s", topicName)
 		}
 	}
 }

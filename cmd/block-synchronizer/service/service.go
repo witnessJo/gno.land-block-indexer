@@ -62,7 +62,7 @@ func NewService(ctx context.Context, logger log.Logger, config *ServiceConfig) S
 	}))
 
 	// Set default endpoints if not provided
-	localStack, err := msgbroker.NewMsgBrokerLocalStack(ctx, config.LocalStackConfig)
+	localStack, err := msgbroker.NewMsgBrokerLocalStack(ctx, logger, config.LocalStackConfig)
 	if err != nil {
 		log.Fatalf("failed to create local stack: %v", err)
 	}

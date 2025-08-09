@@ -31,7 +31,7 @@ func NewController() *Controller {
 			Database: "postgres",
 		},
 		LocalStackConfig: &msgbroker.LocalStackConfig{
-			Endpoint: "localhost:4566",
+			Endpoint: "http://localhost:4566",
 			Region:   "us-east-1",
 		},
 	})

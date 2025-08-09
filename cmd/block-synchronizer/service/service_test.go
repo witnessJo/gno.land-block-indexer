@@ -6,13 +6,16 @@ import (
 	"time"
 
 	// "time"
+	"gno.land-block-indexer/externals/msgbroker"
+	"gno.land-block-indexer/lib/log"
 	"gno.land-block-indexer/model"
 	"gno.land-block-indexer/repository"
 )
 
-func GetTestService() Service {
+func GetTestService(ctx context.Context) Service {
+	logger := log.NewLogger()
 	config := &ServiceConfig{
-		EntConfig: repository.RepositoryEntConfig{
+		EntConfig: &repository.RepositoryEntConfig{
 			Host:     "localhost",
 			Port:     5432,
 			User:     "postgres",
@@ -21,8 +24,12 @@ func GetTestService() Service {
 		},
 		FetchEndpoint:     "https://indexer.onbloc.xyz/graphql/query",
 		WebSocketEndpoint: "wss://indexer.onbloc.xyz/graphql/query",
+		LocalStackConfig: &msgbroker.LocalStackConfig{
+			Endpoint: "http://localhost:4566", // LocalStack endpoint
+			Region:   "us-east-1",             // LocalStack region
+		},
 	}
-	svc := NewService(config)
+	svc := NewService(ctx, logger, config)
 	if svc == nil {
 		panic("Failed to create service")
 	}
@@ -30,7 +37,8 @@ func GetTestService() Service {
 }
 
 func TestPollBlocks(t *testing.T) {
-	service := GetTestService()
+	ctx := context.Background()
+	service := GetTestService(ctx)
 	blocks, err := service.PollBlocks(0, 100000)
 	if err != nil {
 		t.Fatalf("Failed to poll blocks: %v", err)
@@ -51,7 +59,8 @@ func TestPollBlocks(t *testing.T) {
 }
 
 func TestPollTransactions(t *testing.T) {
-	service := GetTestService()
+	ctx := context.Background()
+	service := GetTestService(ctx)
 	transactions, err := service.PollTransactions(0, 100000)
 	if err != nil {
 		t.Fatalf("Failed to poll transactions: %v", err)
@@ -72,11 +81,12 @@ func TestPollTransactions(t *testing.T) {
 }
 
 func TestSubscribeToBlocks(t *testing.T) {
+	ctx := context.Background()
 	ch := make(chan model.Block, 10)
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second) // 30초 동안 실행
 	defer cancel()
 
-	service := GetTestService()
+	service := GetTestService(ctx)
 
 	go func() {
 		err := service.SubscribeLastestBlock(ctx, ch)
