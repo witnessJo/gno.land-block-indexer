@@ -27,7 +27,7 @@ func NewLogger() Logger {
 }
 
 func (l *logger) logWithCaller(level string, logger *log.Logger, format string, args ...any) {
-	_, file, line, ok := runtime.Caller(1)
+	_, file, line, ok := runtime.Caller(2)
 	if !ok {
 		file = "???"
 		line = 0
