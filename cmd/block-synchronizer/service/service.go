@@ -12,7 +12,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
 	"github.com/machinebox/graphql"
-	repositoryBs "gno.land-block-indexer/cmd/block-synchronizer/service/repository"
+	repositoryBs "gno.land-block-indexer/cmd/block-synchronizer/repository"
 	"gno.land-block-indexer/externals/msgbroker"
 	"gno.land-block-indexer/lib/log"
 	"gno.land-block-indexer/model"

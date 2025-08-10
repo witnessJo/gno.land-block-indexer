@@ -7,6 +7,8 @@ import (
 	"gno.land-block-indexer/ent"
 	"gno.land-block-indexer/ent/block"
 	"gno.land-block-indexer/lib/log"
+
+	_ "github.com/lib/pq" // PostgreSQL driver
 )
 
 type repositoryBsEnt struct {
