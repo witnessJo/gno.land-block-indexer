@@ -3,7 +3,6 @@ package repository
 import (
 	"context"
 	"fmt"
-	"log"
 	"time"
 
 	"gno.land-block-indexer/ent"
@@ -13,6 +12,7 @@ import (
 	"gno.land-block-indexer/model"
 
 	_ "github.com/lib/pq"
+	"gno.land-block-indexer/lib/log"
 )
 
 type RepositoryEntConfig struct {
@@ -23,7 +23,7 @@ type RepositoryEntConfig struct {
 	Database string
 }
 
-func NewRepositoryEnt(config *RepositoryEntConfig) Repository {
+func NewRepositoryEnt(logger log.Logger, config *RepositoryEntConfig) Repository {
 	client, err := ent.Open("postgres", "host="+config.Host+
 		" port="+fmt.Sprintf("%d", config.Port)+
 		" user="+config.User+
@@ -36,15 +36,17 @@ func NewRepositoryEnt(config *RepositoryEntConfig) Repository {
 
 	// create the schema if it doesn't exist
 	if err := client.Schema.Create(context.Background()); err != nil {
-		log.Fatalf("failed creating schema resources: %v", err)
+		logger.Fatalf("failed creating schema resources: %v", err)
 	}
 
 	return &RepositoryEnt{
+		logger: logger,
 		client: client,
 	}
 }
 
 type RepositoryEnt struct {
+	logger log.Logger
 	client *ent.Client
 }
 
@@ -54,8 +56,7 @@ func (r *RepositoryEnt) GetHighestBlock(ctx context.Context) (*model.Block, erro
 		Order(ent.Desc("height")).
 		First(ctx)
 	if err != nil {
-		log.Printf("failed to get highest block: %v", err)
-		return nil, err
+		return nil, r.logger.Errorf("failed to get highest block: %v", err)
 	}
 	return &model.Block{
 		Hash:     entBlock.Hash,
@@ -79,8 +80,7 @@ func (r *RepositoryEnt) AddBlock(ctx context.Context, block *model.Block) error 
 		SetCreatedAt(time.Now()).
 		Save(ctx)
 	if err != nil {
-		log.Printf("failed to add block: %v", err)
-		return err
+		return r.logger.Errorf("failed to add block: %v", err)
 	}
 
 	return nil
@@ -105,8 +105,7 @@ func (r *RepositoryEnt) AddBlocks(ctx context.Context, blocks []*model.Block) er
 
 	_, err := r.client.Block.CreateBulk(bulk...).Save(ctx)
 	if err != nil {
-		log.Printf("failed to add blocks: %v", err)
-		return err
+		return r.logger.Errorf("failed to add blocks: %v", err)
 	}
 
 	return nil
@@ -128,8 +127,7 @@ func (r *RepositoryEnt) AddTransaction(ctx context.Context, blockNum int, tx *mo
 		SetCreatedAt(time.Now()).
 		Save(ctx)
 	if err != nil {
-		log.Printf("failed to add transaction: %v", err)
-		return err
+		return r.logger.Errorf("failed to add transaction: %v", err)
 	}
 
 	return nil
@@ -159,8 +157,7 @@ func (r *RepositoryEnt) AddTransactions(ctx context.Context, blockNum int, txs [
 
 	_, err := r.client.Transaction.CreateBulk(bulk...).Save(ctx)
 	if err != nil {
-		log.Printf("failed to add transactions: %v", err)
-		return err
+		return r.logger.Errorf("failed to add transactions: %v", err)
 	}
 
 	return nil
@@ -172,8 +169,7 @@ func (r *RepositoryEnt) GetBlock(ctx context.Context, blockNum int) (*model.Bloc
 		Where(block.HeightEQ(blockNum)).
 		Only(ctx)
 	if err != nil {
-		log.Printf("failed to get block: %v", err)
-		return nil, err
+		return nil, r.logger.Errorf("failed to get block %d: %v", blockNum, err)
 	}
 
 	return &model.Block{
@@ -193,8 +189,7 @@ func (r *RepositoryEnt) GetBlocks(ctx context.Context, offset int, limit int) ([
 		Order(ent.Desc("height")).
 		All(ctx)
 	if err != nil {
-		log.Printf("failed to get blocks: %v", err)
-		return nil, err
+		return nil, r.logger.Errorf("failed to get blocks (offset=%d, limit=%d): %v", offset, limit, err)
 	}
 
 	blocks := make([]model.Block, len(entBlocks))
@@ -217,8 +212,7 @@ func (r *RepositoryEnt) GetTransaction(ctx context.Context, txHash string) (*mod
 		Where(transaction.HashEQ(txHash)).
 		Only(ctx)
 	if err != nil {
-		log.Printf("failed to get transaction: %v", err)
-		return nil, err
+		return nil, r.logger.Errorf("failed to get transaction %s: %v", txHash, err)
 	}
 
 	return &model.Transaction{
@@ -244,8 +238,7 @@ func (r *RepositoryEnt) GetTransactions(ctx context.Context, blockNum int, offse
 		Order(ent.Asc("index")).
 		All(ctx)
 	if err != nil {
-		log.Printf("failed to get transactions: %v", err)
-		return nil, err
+		return nil, r.logger.Errorf("failed to get transactions for block %d (offset=%d, limit=%d): %v", blockNum, offset, limit, err)
 	}
 
 	txs := make([]model.Transaction, len(entTxs))

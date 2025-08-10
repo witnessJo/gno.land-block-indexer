@@ -30,7 +30,7 @@ type ServiceConfig struct {
 }
 
 func NewService(ctx context.Context, logger log.Logger, config *ServiceConfig) Service {
-	repo := repository.NewRepositoryEnt(config.EntConfig)
+	repo := repository.NewRepositoryEnt(logger, config.EntConfig)
 
 	localStack, err := msgbroker.NewMsgBrokerLocalStack(ctx, logger, config.LocalStackConfig)
 	if err != nil {
@@ -48,9 +48,19 @@ func NewService(ctx context.Context, logger log.Logger, config *ServiceConfig) S
 func (s *service) SubscribeAndHandle(ctx context.Context) error {
 	s.logger.Infof("Starting subscription to block with transactions topic")
 
+	// Create worker pool for async processing
+	workCh := make(chan msgbroker.BlockWithTransactions, 100)
+	const numWorkers = 5
+
+	// Start workers
+	for i := 0; i < numWorkers; i++ {
+		go s.messageWorker(ctx, workCh, i)
+	}
+
 	// Subscribe to the topic
 	err := s.msgBroker.Subscribe(topicBlockWithTransactions, func(message []byte) error {
-		s.logger.Infof("Received message: %s", message)
+		s.logger.Debugf("Received message of size: %d bytes", len(message))
+
 		// Unmarshal the message into BlockWithTransactions struct
 		var blockWithTxs msgbroker.BlockWithTransactions
 		err := json.Unmarshal(message, &blockWithTxs)
@@ -58,17 +68,16 @@ func (s *service) SubscribeAndHandle(ctx context.Context) error {
 			return s.logger.Errorf("Failed to unmarshal message: %v", err)
 		}
 
-		err = s.repo.AddBlock(ctx, blockWithTxs.Block)
-		if err != nil {
-			return s.logger.Errorf("Failed to add block: %v", err)
+		// Send to worker pool (non-blocking)
+		select {
+		case workCh <- blockWithTxs:
+			// Message sent to worker successfully
+			return nil
+		default:
+			// Worker pool is full, log and drop message
+			s.logger.Warnf("Worker pool full, dropping block: Height=%d", blockWithTxs.Block.Height)
+			return nil
 		}
-
-		err = s.repo.AddTransactions(ctx, blockWithTxs.Block.Height, blockWithTxs.Transactions)
-		if err != nil {
-			return s.logger.Errorf("Failed to add transactions: %v", err)
-		}
-		s.logger.Infof("Successfully added block and transactions to repository")
-		return nil
 	})
 
 	// Check for errors in subscription
@@ -77,13 +86,49 @@ func (s *service) SubscribeAndHandle(ctx context.Context) error {
 	}
 	s.logger.Infof("Subscribed to topic %s successfully", topicBlockWithTransactions)
 
-	// Wait for a while before subscribing again
-	select {
-	case <-ctx.Done():
-		s.logger.Infof("Context done, stopping subscription")
-		return nil
-	default:
-		s.logger.Infof("Waiting for new messages...")
+	// Keep running until context is cancelled
+	<-ctx.Done()
+	s.logger.Infof("Context done, stopping subscription")
+	close(workCh)
+	return ctx.Err()
+}
+
+// messageWorker processes messages in a worker pool pattern
+func (s *service) messageWorker(ctx context.Context, workCh <-chan msgbroker.BlockWithTransactions, workerID int) {
+	s.logger.Infof("Starting message worker %d", workerID)
+	for {
+		select {
+		case <-ctx.Done():
+			s.logger.Infof("Message worker %d stopping", workerID)
+			return
+		case blockWithTxs, ok := <-workCh:
+			if !ok {
+				s.logger.Infof("Message worker %d: work channel closed", workerID)
+				return
+			}
+
+			// Process message
+			if err := s.processBlockWithTransactions(ctx, blockWithTxs); err != nil {
+				s.logger.Errorf("Worker %d failed to process block %d: %v",
+					workerID, blockWithTxs.Block.Height, err)
+			}
+		}
 	}
+}
+
+// processBlockWithTransactions handles the actual message processing
+func (s *service) processBlockWithTransactions(ctx context.Context, blockWithTxs msgbroker.BlockWithTransactions) error {
+	err := s.repo.AddBlock(ctx, blockWithTxs.Block)
+	if err != nil {
+		return s.logger.Errorf("failed to add block %d: %w", blockWithTxs.Block.Height, err)
+	}
+
+	err = s.repo.AddTransactions(ctx, blockWithTxs.Block.Height, blockWithTxs.Transactions)
+	if err != nil {
+		return s.logger.Errorf("failed to add transactions for block %d: %w", blockWithTxs.Block.Height, err)
+	}
+
+	s.logger.Infof("Successfully processed block %d with %d transactions",
+		blockWithTxs.Block.Height, len(blockWithTxs.Transactions))
 	return nil
 }

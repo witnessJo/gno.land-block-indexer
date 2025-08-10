@@ -12,6 +12,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
 	"github.com/machinebox/graphql"
+	repositoryBs "gno.land-block-indexer/cmd/block-synchronizer/service/repository"
 	"gno.land-block-indexer/externals/msgbroker"
 	"gno.land-block-indexer/lib/log"
 	"gno.land-block-indexer/model"
@@ -24,8 +25,8 @@ const (
 
 type Service interface {
 	// usecases (from controller)
-	RestoreMissingBlockAndTransactions(ctx context.Context, blockHeight int) error
-	SubscribeAndPush() error
+	RestoreMissingBlockAndTransactions(ctx context.Context) error
+	SubscribeAndPush(ctx context.Context) error
 
 	// repository operations
 	GetMissingBlocks() ([]model.Block, error)
@@ -35,12 +36,13 @@ type Service interface {
 	// poll operations (graphql)
 	PollBlocks(offset int, limit int) ([]model.Block, error)
 	PollTransactions(blockOffset int, limit int) ([]model.Transaction, error)
-	SubscribeLastestBlock(ctx context.Context, ch chan<- model.Block) error
+	SubscribeLastestBlock(ctx context.Context, ch chan<- model.Block, once bool) error
 }
 
 type service struct {
 	logger            log.Logger
 	repo              repository.Repository
+	repoBs            repositoryBs.RepositoryBs
 	localStack        msgbroker.MsgBroker
 	client            *graphql.Client
 	websocketEndpoint string
@@ -55,8 +57,17 @@ type ServiceConfig struct {
 
 func NewService(ctx context.Context, logger log.Logger, config *ServiceConfig) Service {
 	repo := repository.NewRepositoryEnt(
+		logger,
 		config.EntConfig,
 	)
+	repoBs := repositoryBs.NewRepositoryBsEnt(logger, &repositoryBs.RepositoryBsEntConfig{
+		Host:     config.EntConfig.Host,
+		Port:     config.EntConfig.Port,
+		User:     config.EntConfig.User,
+		Password: config.EntConfig.Password,
+		Database: config.EntConfig.Database,
+	})
+
 	client := graphql.NewClient(config.FetchEndpoint, graphql.WithHTTPClient(&http.Client{
 		Timeout: 30 * time.Second,
 	}))
@@ -80,6 +91,7 @@ func NewService(ctx context.Context, logger log.Logger, config *ServiceConfig) S
 	return &service{
 		logger:            logger,
 		repo:              repo,
+		repoBs:            repoBs,
 		client:            client,
 		websocketEndpoint: websocketEndpoint,
 		localStack:        localStack,
@@ -87,57 +99,179 @@ func NewService(ctx context.Context, logger log.Logger, config *ServiceConfig) S
 }
 
 // RestoreMissingBlockAndTransactions implements Service.
-func (s *service) RestoreMissingBlockAndTransactions(ctx context.Context, blockHeight int) error {
-	panic("unimplemented")
+func (s *service) RestoreMissingBlockAndTransactions(ctx context.Context) error {
+	// Get missing blocks
+
+	chBlock := make(chan model.Block, 100)
+	err := s.SubscribeLastestBlock(ctx, chBlock, true)
+	if err != nil {
+		return s.logger.Errorf("failed to subscribe to latest block: %v", err)
+	}
+
+	var ok bool
+	var block model.Block
+	select {
+	case <-ctx.Done():
+		s.logger.Infof("context done, stopping subscription")
+		close(chBlock)
+	case block, ok = <-chBlock:
+		if !ok {
+			s.logger.Infof("channel closed, stopping subscription")
+			return nil
+		}
+		s.logger.Infof("Received block: Height=%d, Hash=%s, Time=%s",
+			block.Height, block.Hash, block.Time)
+		s.logger.Infof("Total messages received: %d", 1)
+		break // Exit after receiving the first block
+	}
+
+	// Get blocks from repository
+	startBlockNum, err := s.repoBs.GetNotSequentialBlockNum(ctx)
+	if err != nil {
+		return s.logger.Errorf("failed to get not sequential block number: %v", err)
+	}
+
+	// Poll blocks from GraphQL
+	for i := startBlockNum; i < block.Height; i += 100 {
+		blocks, err := s.PollBlocks(i, 100)
+		if err != nil {
+			return s.logger.Errorf("failed to poll blocks: %v", err)
+		}
+		if len(blocks) == 0 {
+			s.logger.Infof("No more blocks to poll, stopping")
+			break
+		}
+		s.logger.Infof("Polled %d blocks starting from height %d", len(blocks), i)
+
+		transactions, err := s.PollTransactions(i, 100)
+		if err != nil {
+			return s.logger.Errorf("failed to poll transactions for block %d: %v", i, err)
+		}
+
+		// assemble block with transactions
+		blockWithTxs := []msgbroker.BlockWithTransactions{}
+		for _, block := range blocks {
+			blockWithTxs = append(blockWithTxs, msgbroker.BlockWithTransactions{
+				Block: &block,
+				Transactions: func() []model.Transaction {
+					var txs []model.Transaction
+					for _, tx := range transactions {
+						if tx.BlockHeight == block.Height {
+							txs = append(txs, tx)
+						}
+					}
+					return txs
+				}(),
+			})
+		}
+
+		// Publish block with transactions
+		for _, bwt := range blockWithTxs {
+			msgBytes, err := json.Marshal(bwt)
+			if err != nil {
+				s.logger.Infof("failed to marshal block with transactions: %v", err)
+				continue
+			}
+
+			if err := s.localStack.Publish(topicBlockWithTxs, msgBytes); err != nil {
+				s.logger.Infof("failed to publish block with transactions: %v", err)
+				continue
+			}
+			s.logger.Infof("Published block with transactions for height %d", bwt.Block.Height)
+		}
+	}
+
+	return nil
 }
 
 // SubscribeAndPush implements Service.
-func (s *service) SubscribeAndPush() error {
-	ctx := context.Background()
+func (s *service) SubscribeAndPush(ctx context.Context) error {
 	ch := make(chan model.Block, 100)
+	workCh := make(chan model.Block, 1000) // Buffer for worker pool
 
 	// Start the subscription in a goroutine
 	go func() {
-		if err := s.SubscribeLastestBlock(ctx, ch); err != nil {
+		if err := s.SubscribeLastestBlock(ctx, ch, false); err != nil {
 			s.logger.Infof("failed to subscribe to latest block: %v", err)
 		}
 	}()
+
+	// Start worker pool
+	const numWorkers = 10
+	for i := 0; i < numWorkers; i++ {
+		go s.blockWorker(ctx, workCh, i)
+	}
 
 	for {
 		select {
 		case <-ctx.Done():
 			s.logger.Infof("context done, stopping subscription")
 			close(ch)
+			close(workCh)
 			return ctx.Err()
 		case block, ok := <-ch:
 			if !ok {
 				s.logger.Infof("channel closed, stopping subscription")
+				close(workCh)
 				return nil
 			}
 
-			go func() {
-				transactions, err := s.PollTransactions(block.Height, 1) // Poll transactions for the block
-				if err != nil {
-					s.logger.Infof("failed to poll transactions for block %d: %v", block.Height, err)
-					return
-				}
-				blockMessage := msgbroker.BlockWithTransactions{
-					Block:        &block,
-					Transactions: transactions,
-				}
-				msgBytes, err := json.Marshal(blockMessage) // Ensure the blockMessage is marshaled to JSON
-				if err != nil {
-					s.logger.Infof("failed to marshal block with transactions: %v", err)
-					return
-				}
-
-				if err := s.localStack.Publish(topicBlockWithTxs, msgBytes); err != nil {
-					s.logger.Infof("failed to publish block with transactions: %v", err)
-					return
-				}
-			}()
+			// Send to worker pool (non-blocking)
+			select {
+			case workCh <- block:
+				// Block sent to worker successfully
+			default:
+				// Worker pool is full, drop block and log
+				s.logger.Warnf("Worker pool full, dropping block: Height=%d", block.Height)
+			}
 		}
 	}
+}
+
+// blockWorker processes blocks in a worker pool pattern
+func (s *service) blockWorker(ctx context.Context, workCh <-chan model.Block, workerID int) {
+	s.logger.Infof("Starting worker %d", workerID)
+	for {
+		select {
+		case <-ctx.Done():
+			s.logger.Infof("Worker %d stopping", workerID)
+			return
+		case block, ok := <-workCh:
+			if !ok {
+				s.logger.Infof("Worker %d: work channel closed", workerID)
+				return
+			}
+
+			// Process block
+			if err := s.processBlockWithTransactions(ctx, block); err != nil {
+				s.logger.Errorf("Worker %d failed to process block %d: %v", workerID, block.Height, err)
+			}
+		}
+	}
+}
+
+// processBlockWithTransactions handles the actual block processing
+func (s *service) processBlockWithTransactions(ctx context.Context, block model.Block) error {
+	transactions, err := s.PollTransactions(block.Height, 1)
+	if err != nil {
+		return fmt.Errorf("failed to poll transactions for block %d: %w", block.Height, err)
+	}
+
+	blockMessage := msgbroker.BlockWithTransactions{
+		Block:        &block,
+		Transactions: transactions,
+	}
+
+	msgBytes, err := json.Marshal(blockMessage)
+	if err != nil {
+		return fmt.Errorf("failed to marshal block with transactions: %w", err)
+	}
+
+	if err := s.localStack.Publish(topicBlockWithTxs, msgBytes); err != nil {
+		return fmt.Errorf("failed to publish block with transactions: %w", err)
+	}
+
+	return nil
 }
 
 // GetHighestBlock implements Service.
@@ -433,7 +567,7 @@ func (s *service) PollTransactions(blockOffset int, limit int) ([]model.Transact
 	return transactions, nil
 }
 
-func (s *service) SubscribeLastestBlock(ctx context.Context, ch chan<- model.Block) error {
+func (s *service) SubscribeLastestBlock(ctx context.Context, ch chan<- model.Block, once bool) error {
 	fmt.Println("Connecting to WebSocket endpoint:", s.websocketEndpoint)
 	u, err := url.Parse(s.websocketEndpoint)
 	if err != nil {
@@ -506,8 +640,7 @@ func (s *service) SubscribeLastestBlock(ctx context.Context, ch chan<- model.Blo
 		},
 	}
 
-	data, _ := json.MarshalIndent(subscribeMsg, "", "  ")
-	s.logger.Infof("Sending subscription message: %s", string(data))
+	s.logger.Infof("Sending subscription message with ID: %s", subscriptionID)
 
 	if err := ws.WriteJSON(subscribeMsg); err != nil {
 		return fmt.Errorf("failed to send subscription: %w", err)
@@ -552,16 +685,15 @@ func (s *service) SubscribeLastestBlock(ctx context.Context, ch chan<- model.Blo
 			messageCount++
 			lastMessageTime = time.Now()
 
-			// Log full message for debugging
-			msgBytes, _ := json.Marshal(msg)
-			s.logger.Infof("Received message: %s", string(msgBytes))
-
-			// Handle different message types
+			// Log message type only for performance
 			msgType, ok := msg["type"].(string)
 			if !ok {
 				s.logger.Infof("Received message without type: %v", msg)
 				continue
 			}
+			s.logger.Debugf("Received message type: %s", msgType)
+
+			// Handle different message types
 
 			switch msgType {
 			case "ping":
@@ -570,7 +702,7 @@ func (s *service) SubscribeLastestBlock(ctx context.Context, ch chan<- model.Blo
 				if err := ws.WriteJSON(pongMsg); err != nil {
 					return s.logger.Errorf("failed to send pong: %v", err)
 				}
-				s.logger.Infof("Received ping, sent pong")
+				s.logger.Debugf("Ping/pong handled")
 				continue
 
 			case "next": // graphql-transport-ws uses "next" for data
@@ -627,15 +759,25 @@ func (s *service) SubscribeLastestBlock(ctx context.Context, ch chan<- model.Blo
 				// Send block to channel
 				select {
 				case ch <- block:
-					s.logger.Infof("Received block: Height=%d, Hash=%s, Time=%s",
-						block.Height, block.Hash, block.Time)
-					s.logger.Infof("Total messages received: %d, Time elapsed: %v",
-						messageCount, time.Since(startTime))
+					// Log only essential info for performance
+					if messageCount%10 == 1 { // Log every 10th block
+						s.logger.Infof("Received block: Height=%d, Messages: %d, Elapsed: %v",
+							block.Height, messageCount, time.Since(startTime))
+					}
+
+					if once {
+						s.logger.Infof("Exiting after receiving one block as per 'once' flag")
+						return nil
+					}
+
 				case <-ctx.Done():
 					return ctx.Err()
 				default:
-					s.logger.Infof("Channel is full, dropping block: Height=%d, Hash=%s, Time=%s",
-						block.Height, block.Hash, block.Time)
+					// Non-blocking: if channel full, log occasionally
+					if messageCount%100 == 0 {
+						s.logger.Warnf("Channel full, dropped blocks (latest: Height=%d)",
+							block.Height)
+					}
 				}
 
 			case "error":

@@ -41,6 +41,7 @@ func NewController() *Controller {
 }
 
 func (c *Controller) Run(ctx context.Context) error {
-	go c.service.SubscribeAndPush()
+	// go c.service.SubscribeAndPush(ctx)
+	go c.service.RestoreMissingBlockAndTransactions(ctx)
 	return nil
 }

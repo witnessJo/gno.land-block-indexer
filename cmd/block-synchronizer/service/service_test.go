@@ -89,7 +89,7 @@ func TestSubscribeToBlocks(t *testing.T) {
 	service := GetTestService(ctx)
 
 	go func() {
-		err := service.SubscribeLastestBlock(ctx, ch)
+		err := service.SubscribeLastestBlock(ctx, ch, false)
 		if err != nil && err != context.DeadlineExceeded {
 			t.Errorf("SubscribeToBlocks error: %v", err)
 		}
