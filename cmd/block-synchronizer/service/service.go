@@ -310,7 +310,7 @@ func (s *service) PollBlocks(offset int, limit int) ([]model.Block, error) {
                 num_txs
             }
         }
-    `, offset, offset+limit))
+    `, offset, offset+limit+1))
 
 	// 응답 구조체
 	var resp struct {
