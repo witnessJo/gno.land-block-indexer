@@ -77,9 +77,9 @@ type GasFee struct {
 }
 
 type Message struct {
-	Route   string      `json:"route"`   // Route of the message
-	TypeUrl string      `json:"typeUrl"` // Type URL of the message
-	Value   interface{} `json:"value"`   // Value of the message, can be of different types
+	Route   string         `json:"route"`   // Route of the message
+	TypeUrl string         `json:"typeUrl"` // Type URL of the message
+	Value   map[string]any `json:"value"`   // Value of the message, can be of different types
 }
 
 type Response struct {

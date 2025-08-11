@@ -59,8 +59,6 @@ func (s *service) SubscribeAndHandle(ctx context.Context) error {
 
 	// Subscribe to the topic
 	err := s.msgBroker.Subscribe(topicBlockWithTransactions, func(message []byte) error {
-		s.logger.Debugf("Received message of size: %d bytes", len(message))
-
 		// Unmarshal the message into BlockWithTransactions struct
 		var blockWithTxs msgbroker.BlockWithTransactions
 		err := json.Unmarshal(message, &blockWithTxs)
@@ -128,9 +126,9 @@ func (s *service) processBlockWithTransactions(ctx context.Context, blockWithTxs
 		return s.logger.Errorf("failed to add transactions for block %d: %w", blockWithTxs.Block.Height, err)
 	}
 
-	s.logger.Infof("Successfully processed block %d with %d transactions",
-		blockWithTxs.Block.Height, len(blockWithTxs.Transactions))
+	s.logger.Infof("Successfully processed block %d with %d transactions", blockWithTxs.Block.Height, len(blockWithTxs.Transactions))
+
+	// add
 
 	return nil
-
 }

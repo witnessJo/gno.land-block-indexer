@@ -80,7 +80,10 @@ func (r *RepositoryEnt) AddBlock(ctx context.Context, block *model.Block) error 
 		SetNumTxs(block.NumTxs).
 		SetCreatedAt(time.Now()).
 		Save(ctx)
-	if err != nil {
+
+	if ent.IsConstraintError(err) {
+		// If the block already exists, we can ignore the error
+	} else if err != nil {
 		return r.logger.Errorf("failed to add block: %v", err)
 	}
 
@@ -157,7 +160,9 @@ func (r *RepositoryEnt) AddTransactions(ctx context.Context, blockNum int, txs [
 	}
 
 	_, err := r.client.Transaction.CreateBulk(bulk...).Save(ctx)
-	if err != nil {
+	if ent.IsConstraintError(err) {
+		// If the transactions already exist, we can ignore the error
+	} else if err != nil {
 		return r.logger.Errorf("failed to add transactions: %v", err)
 	}
 

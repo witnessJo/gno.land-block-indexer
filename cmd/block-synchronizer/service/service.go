@@ -494,9 +494,9 @@ func (s *service) PollTransactions(blockOffset int, limit int) ([]model.Transact
 			Memo        string       `json:"memo"`
 			GasFee      model.GasFee `json:"gas_fee"`
 			Messages    []struct {
-				Route   string `json:"route"`
-				TypeUrl string `json:"typeUrl"`
-				Value   any    `json:"value"` // 다양한 타입을 처리하기 위해 interface{} 사용
+				Route   string         `json:"route"`
+				TypeUrl string         `json:"typeUrl"`
+				Value   map[string]any `json:"value"` // 다양한 타입을 처리하기 위해 interface{} 사용
 			} `json:"messages"`
 			Response struct {
 				Log    string `json:"log"`
@@ -542,11 +542,10 @@ func (s *service) PollTransactions(blockOffset int, limit int) ([]model.Transact
 		// Messages 변환 - Value를 JSON 문자열로 저장
 		messages := make([]model.Message, len(t.Messages))
 		for i, msg := range t.Messages {
-			valueJSON, _ := json.Marshal(msg.Value)
 			messages[i] = model.Message{
 				Route:   msg.Route,
 				TypeUrl: msg.TypeUrl,
-				Value:   string(valueJSON), // JSON 문자열로 저장
+				Value:   msg.Value,
 			}
 		}
 

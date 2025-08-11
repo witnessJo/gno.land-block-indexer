@@ -20,9 +20,9 @@ type GasFee struct {
 }
 
 type Message struct {
-	Route   string      `json:"route"`
-	TypeUrl string      `json:"typeUrl"`
-	Value   interface{} `json:"value"`
+	Route   string         `json:"route"`
+	TypeUrl string         `json:"typeUrl"`
+	Value   map[string]any `json:"value"`
 }
 
 type Response struct {
