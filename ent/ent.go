@@ -16,6 +16,7 @@ import (
 	"gno.land-block-indexer/ent/block"
 	"gno.land-block-indexer/ent/restorehistory"
 	"gno.land-block-indexer/ent/transaction"
+	"gno.land-block-indexer/ent/transfer"
 )
 
 // ent aliases to avoid import conflicts in user's code.
@@ -80,6 +81,7 @@ func checkColumn(t, c string) error {
 			block.Table:          block.ValidColumn,
 			restorehistory.Table: restorehistory.ValidColumn,
 			transaction.Table:    transaction.ValidColumn,
+			transfer.Table:       transfer.ValidColumn,
 		})
 	})
 	return columnCheck(t, c)

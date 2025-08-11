@@ -3,9 +3,13 @@ package service
 import (
 	"context"
 	"encoding/json"
+	"strconv"
+	"strings"
+	"time"
 
 	"gno.land-block-indexer/externals/msgbroker"
 	"gno.land-block-indexer/lib/log"
+	"gno.land-block-indexer/model"
 	"gno.land-block-indexer/repository"
 )
 
@@ -128,7 +132,172 @@ func (s *service) processBlockWithTransactions(ctx context.Context, blockWithTxs
 
 	s.logger.Infof("Successfully processed block %d with %d transactions", blockWithTxs.Block.Height, len(blockWithTxs.Transactions))
 
-	// add
+	// Parse transactions to extract transfers and account updates
+	if err := s.parseAndProcessTransactions(ctx, blockWithTxs.Transactions); err != nil {
+		return s.logger.Errorf("failed to parse and process transactions for block %d: %w", blockWithTxs.Block.Height, err)
+	}
+
+	return nil
+}
+
+// parseAndProcessTransactions parses transactions to extract transfers and account information
+func (s *service) parseAndProcessTransactions(ctx context.Context, transactions []model.Transaction) error {
+	var err error
+
+	for _, tx := range transactions {
+		for _, event := range tx.Response.Events {
+			if strings.ToLower(event.Type) == "transfer" {
+				var fromAddress, toAddress string
+				var numValue int64
+
+				for _, attr := range event.Attrs {
+					if attr.Key == "from" {
+						fromAddress = attr.Value
+					} else if attr.Key == "to" {
+						toAddress = attr.Value
+					} else if attr.Key == "value" {
+						numValue, err = strconv.ParseInt(attr.Value, 10, 64)
+						if err != nil {
+							return s.logger.Errorf("Invalid 'value' attribute in transfer event for transaction %s: %v", tx.Hash, err)
+						}
+					}
+				}
+
+				switch strings.ToLower(event.Func) {
+				case "mint":
+					if err := s.handleMintEvent(ctx, &tx, event.PkgPath, fromAddress, toAddress, numValue); err != nil {
+						return s.logger.Errorf("Failed to handle mint event for transaction %s: %v", tx.Hash, err)
+					}
+					break
+				case "burn":
+					if err := s.handleBurnEvent(ctx, &tx, event.PkgPath, fromAddress, toAddress, int64(numValue)); err != nil {
+						return s.logger.Errorf("Failed to handle burn event for transaction %s: %v", tx.Hash, err)
+					}
+					break
+				case "transfer":
+					if err := s.handleTransferEvent(ctx, &tx, event.PkgPath, fromAddress, toAddress, int64(numValue)); err != nil {
+						return s.logger.Errorf("Failed to handle transfer event for transaction %s: %v", tx.Hash, err)
+					}
+					break
+				default:
+					s.logger.Warnf("Unknown event type %s in transaction %s", event.Type, tx.Hash)
+				}
+			}
+		}
+	}
+
+	return nil
+}
+
+func (s *service) handleMintEvent(ctx context.Context, tx *model.Transaction, pkg string, fromAddress string, toAddress string, value int64) error {
+	// For mint events, tokens are created and added to the toAddress
+	// Check if account exists, create if not
+	toAccount, err := s.repo.GetAccount(ctx, toAddress, pkg)
+	if err != nil {
+		return err
+	}
+	if toAccount == nil {
+		err := s.repo.AddAccount(ctx, &model.Account{
+			Address:   toAddress,
+			Token:     pkg,
+			Amount:    0, // Initialize with zero balance
+			CreatedAt: time.Now(),
+		})
+		if err != nil {
+			return s.logger.Errorf("Failed to add account %s: %v", toAddress, err)
+		}
+	}
+
+	// Increment the balance for the minted tokens
+	if err := s.repo.IncrementAccountBalance(ctx, toAddress, pkg, value); err != nil {
+		return s.logger.Errorf("Failed to increment balance for account %s: %v", toAddress, err)
+	}
+
+	s.logger.Infof("Successfully handled mint event: %d tokens minted to %s for transaction %s", value, toAddress, tx.Hash)
+	return nil
+}
+
+func (s *service) handleBurnEvent(ctx context.Context, tx *model.Transaction, pkg string, fromAddress string, toAddress string, value int64) error {
+	// For burn events, tokens are destroyed from the fromAddress
+	// Check if account exists
+	fromAccount, err := s.repo.GetAccount(ctx, fromAddress, pkg)
+	if err != nil {
+		return err
+	}
+	if fromAccount == nil {
+		// If account doesn't exist, create it with zero balance (shouldn't happen in normal burn scenario)
+		err := s.repo.AddAccount(ctx, &model.Account{
+			Address:   fromAddress,
+			Token:     pkg,
+			Amount:    0,
+			CreatedAt: time.Now(),
+		})
+		if err != nil {
+			return s.logger.Errorf("Failed to add account %s: %v", fromAddress, err)
+		}
+	}
+
+	// Decrement the balance for the burned tokens (negative value for burn)
+	if err := s.repo.IncrementAccountBalance(ctx, fromAddress, pkg, -value); err != nil {
+		return s.logger.Errorf("Failed to decrement balance for account %s: %v", fromAddress, err)
+	}
+
+	s.logger.Infof("Successfully handled burn event: %d tokens burned from %s for transaction %s", value, fromAddress, tx.Hash)
+	return nil
+}
+
+func (s *service) handleTransferEvent(ctx context.Context, tx *model.Transaction, pkg string, fromAddress string, toAddress string, value int64) error {
+	fromAccount, err := s.repo.GetAccount(ctx, fromAddress, pkg)
+	if err != nil {
+		return err
+	}
+	if fromAccount == nil {
+		err := s.repo.AddAccount(ctx, &model.Account{
+			Address: fromAddress,
+			Token:   pkg,
+			Amount:  0, // Initialize with zero balance
+		})
+		if err != nil {
+			return s.logger.Errorf("Failed to add account %s: %v", fromAddress, err)
+		}
+	}
+
+	toAccount, err := s.repo.GetAccount(ctx, toAddress, pkg)
+	if err != nil {
+		return err
+	}
+	if toAccount == nil {
+		err := s.repo.AddAccount(ctx, &model.Account{
+			Address: toAddress,
+			Token:   pkg,
+			Amount:  0, // Initialize with zero balance
+		})
+		if err != nil {
+			return s.logger.Errorf("Failed to add account %s: %v", toAddress, err)
+		}
+	}
+
+	// Example: Update account balances in repository
+	if err := s.repo.AddTransfer(ctx, &model.Transfer{
+		FromAddress: fromAddress,
+		ToAddress:   toAddress,
+		Token:       pkg,
+		Amount:      float64(value),
+		Denom:       "ugnot",
+		CreatedAt:   time.Now(),
+	}); err != nil {
+		return s.logger.Errorf("Failed to add transfer for transaction %s: %v", tx.Hash, err)
+	}
+	s.logger.Infof("Successfully handled transfer event for transaction %s", tx.Hash)
+
+	// Update account balances
+
+	if err := s.repo.IncrementAccountBalance(ctx, fromAddress, pkg, -(value)); err != nil {
+		return s.logger.Errorf("Failed to decrement balance for account %s: %v", fromAddress, err)
+	}
+	if err := s.repo.IncrementAccountBalance(ctx, toAddress, pkg, value); err != nil {
+		return s.logger.Errorf("Failed to increment balance for account %s: %v", toAddress, err)
+	}
 
 	return nil
 }

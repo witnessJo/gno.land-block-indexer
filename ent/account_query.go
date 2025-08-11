@@ -15,6 +15,7 @@ import (
 	"gno.land-block-indexer/ent/account"
 	"gno.land-block-indexer/ent/predicate"
 	"gno.land-block-indexer/ent/transaction"
+	"gno.land-block-indexer/ent/transfer"
 )
 
 // AccountQuery is the builder for querying Account entities.
@@ -25,6 +26,7 @@ type AccountQuery struct {
 	inters           []Interceptor
 	predicates       []predicate.Account
 	withTransactions *TransactionQuery
+	withTransfers    *TransferQuery
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
 	path func(context.Context) (*sql.Selector, error)
@@ -76,6 +78,28 @@ func (_q *AccountQuery) QueryTransactions() *TransactionQuery {
 			sqlgraph.From(account.Table, account.FieldID, selector),
 			sqlgraph.To(transaction.Table, transaction.FieldID),
 			sqlgraph.Edge(sqlgraph.O2M, false, account.TransactionsTable, account.TransactionsColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
+// QueryTransfers chains the current query on the "transfers" edge.
+func (_q *AccountQuery) QueryTransfers() *TransferQuery {
+	query := (&TransferClient{config: _q.config}).Query()
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := _q.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := _q.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(account.Table, account.FieldID, selector),
+			sqlgraph.To(transfer.Table, transfer.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, account.TransfersTable, account.TransfersColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
 		return fromU, nil
@@ -276,6 +300,7 @@ func (_q *AccountQuery) Clone() *AccountQuery {
 		inters:           append([]Interceptor{}, _q.inters...),
 		predicates:       append([]predicate.Account{}, _q.predicates...),
 		withTransactions: _q.withTransactions.Clone(),
+		withTransfers:    _q.withTransfers.Clone(),
 		// clone intermediate query.
 		sql:  _q.sql.Clone(),
 		path: _q.path,
@@ -290,6 +315,17 @@ func (_q *AccountQuery) WithTransactions(opts ...func(*TransactionQuery)) *Accou
 		opt(query)
 	}
 	_q.withTransactions = query
+	return _q
+}
+
+// WithTransfers tells the query-builder to eager-load the nodes that are connected to
+// the "transfers" edge. The optional arguments are used to configure the query builder of the edge.
+func (_q *AccountQuery) WithTransfers(opts ...func(*TransferQuery)) *AccountQuery {
+	query := (&TransferClient{config: _q.config}).Query()
+	for _, opt := range opts {
+		opt(query)
+	}
+	_q.withTransfers = query
 	return _q
 }
 
@@ -371,8 +407,9 @@ func (_q *AccountQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Acco
 	var (
 		nodes       = []*Account{}
 		_spec       = _q.querySpec()
-		loadedTypes = [1]bool{
+		loadedTypes = [2]bool{
 			_q.withTransactions != nil,
+			_q.withTransfers != nil,
 		}
 	)
 	_spec.ScanValues = func(columns []string) ([]any, error) {
@@ -397,6 +434,13 @@ func (_q *AccountQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Acco
 		if err := _q.loadTransactions(ctx, query, nodes,
 			func(n *Account) { n.Edges.Transactions = []*Transaction{} },
 			func(n *Account, e *Transaction) { n.Edges.Transactions = append(n.Edges.Transactions, e) }); err != nil {
+			return nil, err
+		}
+	}
+	if query := _q.withTransfers; query != nil {
+		if err := _q.loadTransfers(ctx, query, nodes,
+			func(n *Account) { n.Edges.Transfers = []*Transfer{} },
+			func(n *Account, e *Transfer) { n.Edges.Transfers = append(n.Edges.Transfers, e) }); err != nil {
 			return nil, err
 		}
 	}
@@ -429,6 +473,37 @@ func (_q *AccountQuery) loadTransactions(ctx context.Context, query *Transaction
 		node, ok := nodeids[*fk]
 		if !ok {
 			return fmt.Errorf(`unexpected referenced foreign-key "account_transactions" returned %v for node %v`, *fk, n.ID)
+		}
+		assign(node, n)
+	}
+	return nil
+}
+func (_q *AccountQuery) loadTransfers(ctx context.Context, query *TransferQuery, nodes []*Account, init func(*Account), assign func(*Account, *Transfer)) error {
+	fks := make([]driver.Value, 0, len(nodes))
+	nodeids := make(map[string]*Account)
+	for i := range nodes {
+		fks = append(fks, nodes[i].ID)
+		nodeids[nodes[i].ID] = nodes[i]
+		if init != nil {
+			init(nodes[i])
+		}
+	}
+	query.withFKs = true
+	query.Where(predicate.Transfer(func(s *sql.Selector) {
+		s.Where(sql.InValues(s.C(account.TransfersColumn), fks...))
+	}))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		fk := n.account_transfers
+		if fk == nil {
+			return fmt.Errorf(`foreign-key "account_transfers" is nil for node %v`, n.ID)
+		}
+		node, ok := nodeids[*fk]
+		if !ok {
+			return fmt.Errorf(`unexpected referenced foreign-key "account_transfers" returned %v for node %v`, *fk, n.ID)
 		}
 		assign(node, n)
 	}

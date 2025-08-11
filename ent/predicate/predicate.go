@@ -17,3 +17,6 @@ type RestoreHistory func(*sql.Selector)
 
 // Transaction is the predicate function for transaction builders.
 type Transaction func(*sql.Selector)
+
+// Transfer is the predicate function for transfer builders.
+type Transfer func(*sql.Selector)

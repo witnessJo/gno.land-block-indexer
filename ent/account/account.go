@@ -18,8 +18,12 @@ const (
 	FieldAmount = "amount"
 	// EdgeTransactions holds the string denoting the transactions edge name in mutations.
 	EdgeTransactions = "transactions"
+	// EdgeTransfers holds the string denoting the transfers edge name in mutations.
+	EdgeTransfers = "transfers"
 	// TransactionFieldID holds the string denoting the ID field of the Transaction.
 	TransactionFieldID = "id"
+	// TransferFieldID holds the string denoting the ID field of the Transfer.
+	TransferFieldID = "id"
 	// Table holds the table name of the account in the database.
 	Table = "accounts"
 	// TransactionsTable is the table that holds the transactions relation/edge.
@@ -29,6 +33,13 @@ const (
 	TransactionsInverseTable = "transactions"
 	// TransactionsColumn is the table column denoting the transactions relation/edge.
 	TransactionsColumn = "account_transactions"
+	// TransfersTable is the table that holds the transfers relation/edge.
+	TransfersTable = "transfers"
+	// TransfersInverseTable is the table name for the Transfer entity.
+	// It exists in this package in order to avoid circular dependency with the "transfer" package.
+	TransfersInverseTable = "transfers"
+	// TransfersColumn is the table column denoting the transfers relation/edge.
+	TransfersColumn = "account_transfers"
 )
 
 // Columns holds all SQL columns for account fields.
@@ -86,10 +97,31 @@ func ByTransactions(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
 		sqlgraph.OrderByNeighborTerms(s, newTransactionsStep(), append([]sql.OrderTerm{term}, terms...)...)
 	}
 }
+
+// ByTransfersCount orders the results by transfers count.
+func ByTransfersCount(opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborsCount(s, newTransfersStep(), opts...)
+	}
+}
+
+// ByTransfers orders the results by transfers terms.
+func ByTransfers(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newTransfersStep(), append([]sql.OrderTerm{term}, terms...)...)
+	}
+}
 func newTransactionsStep() *sqlgraph.Step {
 	return sqlgraph.NewStep(
 		sqlgraph.From(Table, FieldID),
 		sqlgraph.To(TransactionsInverseTable, TransactionFieldID),
 		sqlgraph.Edge(sqlgraph.O2M, false, TransactionsTable, TransactionsColumn),
+	)
+}
+func newTransfersStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(TransfersInverseTable, TransferFieldID),
+		sqlgraph.Edge(sqlgraph.O2M, false, TransfersTable, TransfersColumn),
 	)
 }

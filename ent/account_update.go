@@ -13,6 +13,7 @@ import (
 	"gno.land-block-indexer/ent/account"
 	"gno.land-block-indexer/ent/predicate"
 	"gno.land-block-indexer/ent/transaction"
+	"gno.land-block-indexer/ent/transfer"
 )
 
 // AccountUpdate is the builder for updating Account entities.
@@ -78,6 +79,21 @@ func (_u *AccountUpdate) AddTransactions(v ...*Transaction) *AccountUpdate {
 	return _u.AddTransactionIDs(ids...)
 }
 
+// AddTransferIDs adds the "transfers" edge to the Transfer entity by IDs.
+func (_u *AccountUpdate) AddTransferIDs(ids ...int) *AccountUpdate {
+	_u.mutation.AddTransferIDs(ids...)
+	return _u
+}
+
+// AddTransfers adds the "transfers" edges to the Transfer entity.
+func (_u *AccountUpdate) AddTransfers(v ...*Transfer) *AccountUpdate {
+	ids := make([]int, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddTransferIDs(ids...)
+}
+
 // Mutation returns the AccountMutation object of the builder.
 func (_u *AccountUpdate) Mutation() *AccountMutation {
 	return _u.mutation
@@ -102,6 +118,27 @@ func (_u *AccountUpdate) RemoveTransactions(v ...*Transaction) *AccountUpdate {
 		ids[i] = v[i].ID
 	}
 	return _u.RemoveTransactionIDs(ids...)
+}
+
+// ClearTransfers clears all "transfers" edges to the Transfer entity.
+func (_u *AccountUpdate) ClearTransfers() *AccountUpdate {
+	_u.mutation.ClearTransfers()
+	return _u
+}
+
+// RemoveTransferIDs removes the "transfers" edge to Transfer entities by IDs.
+func (_u *AccountUpdate) RemoveTransferIDs(ids ...int) *AccountUpdate {
+	_u.mutation.RemoveTransferIDs(ids...)
+	return _u
+}
+
+// RemoveTransfers removes "transfers" edges to Transfer entities.
+func (_u *AccountUpdate) RemoveTransfers(v ...*Transfer) *AccountUpdate {
+	ids := make([]int, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveTransferIDs(ids...)
 }
 
 // Save executes the query and returns the number of nodes affected by the update operation.
@@ -207,6 +244,51 @@ func (_u *AccountUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 		}
 		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
+	if _u.mutation.TransfersCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   account.TransfersTable,
+			Columns: []string{account.TransfersColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(transfer.FieldID, field.TypeInt),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedTransfersIDs(); len(nodes) > 0 && !_u.mutation.TransfersCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   account.TransfersTable,
+			Columns: []string{account.TransfersColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(transfer.FieldID, field.TypeInt),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.TransfersIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   account.TransfersTable,
+			Columns: []string{account.TransfersColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(transfer.FieldID, field.TypeInt),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
 	if _node, err = sqlgraph.UpdateNodes(ctx, _u.driver, _spec); err != nil {
 		if _, ok := err.(*sqlgraph.NotFoundError); ok {
 			err = &NotFoundError{account.Label}
@@ -277,6 +359,21 @@ func (_u *AccountUpdateOne) AddTransactions(v ...*Transaction) *AccountUpdateOne
 	return _u.AddTransactionIDs(ids...)
 }
 
+// AddTransferIDs adds the "transfers" edge to the Transfer entity by IDs.
+func (_u *AccountUpdateOne) AddTransferIDs(ids ...int) *AccountUpdateOne {
+	_u.mutation.AddTransferIDs(ids...)
+	return _u
+}
+
+// AddTransfers adds the "transfers" edges to the Transfer entity.
+func (_u *AccountUpdateOne) AddTransfers(v ...*Transfer) *AccountUpdateOne {
+	ids := make([]int, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.AddTransferIDs(ids...)
+}
+
 // Mutation returns the AccountMutation object of the builder.
 func (_u *AccountUpdateOne) Mutation() *AccountMutation {
 	return _u.mutation
@@ -301,6 +398,27 @@ func (_u *AccountUpdateOne) RemoveTransactions(v ...*Transaction) *AccountUpdate
 		ids[i] = v[i].ID
 	}
 	return _u.RemoveTransactionIDs(ids...)
+}
+
+// ClearTransfers clears all "transfers" edges to the Transfer entity.
+func (_u *AccountUpdateOne) ClearTransfers() *AccountUpdateOne {
+	_u.mutation.ClearTransfers()
+	return _u
+}
+
+// RemoveTransferIDs removes the "transfers" edge to Transfer entities by IDs.
+func (_u *AccountUpdateOne) RemoveTransferIDs(ids ...int) *AccountUpdateOne {
+	_u.mutation.RemoveTransferIDs(ids...)
+	return _u
+}
+
+// RemoveTransfers removes "transfers" edges to Transfer entities.
+func (_u *AccountUpdateOne) RemoveTransfers(v ...*Transfer) *AccountUpdateOne {
+	ids := make([]int, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _u.RemoveTransferIDs(ids...)
 }
 
 // Where appends a list predicates to the AccountUpdate builder.
@@ -429,6 +547,51 @@ func (_u *AccountUpdateOne) sqlSave(ctx context.Context) (_node *Account, err er
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(transaction.FieldID, field.TypeInt),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if _u.mutation.TransfersCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   account.TransfersTable,
+			Columns: []string{account.TransfersColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(transfer.FieldID, field.TypeInt),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.RemovedTransfersIDs(); len(nodes) > 0 && !_u.mutation.TransfersCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   account.TransfersTable,
+			Columns: []string{account.TransfersColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(transfer.FieldID, field.TypeInt),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.TransfersIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   account.TransfersTable,
+			Columns: []string{account.TransfersColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(transfer.FieldID, field.TypeInt),
 			},
 		}
 		for _, k := range nodes {

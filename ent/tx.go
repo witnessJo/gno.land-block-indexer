@@ -20,6 +20,8 @@ type Tx struct {
 	RestoreHistory *RestoreHistoryClient
 	// Transaction is the client for interacting with the Transaction builders.
 	Transaction *TransactionClient
+	// Transfer is the client for interacting with the Transfer builders.
+	Transfer *TransferClient
 
 	// lazily loaded.
 	client     *Client
@@ -155,6 +157,7 @@ func (tx *Tx) init() {
 	tx.Block = NewBlockClient(tx.config)
 	tx.RestoreHistory = NewRestoreHistoryClient(tx.config)
 	tx.Transaction = NewTransactionClient(tx.config)
+	tx.Transfer = NewTransferClient(tx.config)
 }
 
 // txDriver wraps the given dialect.Tx with a nop dialect.Driver implementation.

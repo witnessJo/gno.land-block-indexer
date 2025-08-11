@@ -527,8 +527,7 @@ func (s *service) PollTransactions(blockOffset int, limit int) ([]model.Transact
 		return nil, fmt.Errorf("failed to execute GraphQL query: %v, query: %s", err, reqData)
 	}
 
-	// Debug: Log successful response
-	s.logger.Infof("GraphQL Transaction Response: Found %d transactions", len(resp.GetTransactions))
+	// s.logger.Infof("GraphQL Transaction Response: Found %d transactions", len(resp.GetTransactions))
 
 	// 변환
 	transactions := make([]model.Transaction, 0, len(resp.GetTransactions))
@@ -549,11 +548,15 @@ func (s *service) PollTransactions(blockOffset int, limit int) ([]model.Transact
 			}
 		}
 
-		// Events를 JSON 문자열 배열로 변환
-		events := make([]string, len(t.Response.Events))
+		// Events 변환
+		events := make([]model.Event, len(t.Response.Events))
 		for i, event := range t.Response.Events {
-			eventJSON, _ := json.Marshal(event)
-			events[i] = string(eventJSON)
+			events[i] = model.Event{
+				Type:    event.Type,
+				Func:    event.Func,
+				PkgPath: event.PkgPath,
+				Attrs:   event.Attrs,
+			}
 		}
 
 		// Response 변환
@@ -706,9 +709,6 @@ func (s *service) SubscribeLastestBlock(ctx context.Context, ch chan<- model.Blo
 				s.logger.Infof("Received message without type: %v", msg)
 				continue
 			}
-			s.logger.Debugf("Received message type: %s", msgType)
-
-			// Handle different message types
 
 			switch msgType {
 			case "ping":

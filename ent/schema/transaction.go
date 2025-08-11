@@ -26,11 +26,21 @@ type Message struct {
 }
 
 type Response struct {
-	Log    string   `json:"log"`
-	Info   string   `json:"info"`
-	Error  string   `json:"error"`
-	Data   string   `json:"data"`
-	Events []string `json:"events"`
+	Log    string  `json:"log"`
+	Info   string  `json:"info"`
+	Error  string  `json:"error"`
+	Data   string  `json:"data"`
+	Events []Event `json:"events"`
+}
+
+type Event struct {
+	Type    string `json:"type"`
+	Func    string `json:"func"`
+	PkgPath string `json:"pkg_path"`
+	Attrs   []struct {
+		Key   string `json:"key"`
+		Value string `json:"value"`
+	} `json:"attrs"`
 }
 
 // Fields of the Transaction.

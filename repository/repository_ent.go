@@ -6,9 +6,11 @@ import (
 	"time"
 
 	"gno.land-block-indexer/ent"
+	"gno.land-block-indexer/ent/account"
 	"gno.land-block-indexer/ent/block"
 	"gno.land-block-indexer/ent/schema"
 	"gno.land-block-indexer/ent/transaction"
+	"gno.land-block-indexer/ent/transfer"
 	"gno.land-block-indexer/model"
 
 	_ "github.com/lib/pq"
@@ -266,6 +268,132 @@ func (r *RepositoryEnt) GetTransactions(ctx context.Context, blockNum int, offse
 	return txs, nil
 }
 
+// AddAccount implements Repository.
+func (r *RepositoryEnt) AddAccount(ctx context.Context, account *model.Account) error {
+	_, err := r.client.Account.Create().
+		SetID(account.Address).
+		SetToken(account.Token).
+		SetAmount(account.Amount).
+		Save(ctx)
+	if err != nil {
+		return r.logger.Errorf("failed to add account %s: %v", account.Address, err)
+	}
+
+	return nil
+}
+
+// GetAccount implements Repository.
+func (r *RepositoryEnt) GetAccount(ctx context.Context, address string, token string) (*model.Account, error) {
+	entAccount, err := r.client.Account.Query().
+		Where(
+			account.IDEQ(address),
+			account.TokenEQ(token),
+		).Only(ctx)
+	if err != nil {
+		if ent.IsNotFound(err) {
+			return nil, nil // Account not found
+		}
+		return nil, r.logger.Errorf("failed to get account %s: %v", address, err)
+	}
+
+	return &model.Account{
+		Address: address,
+		Token:   token,
+		Amount:  entAccount.Amount,
+	}, nil
+}
+
+// IncrementAccountBalance implements Repository.
+func (r *RepositoryEnt) IncrementAccountBalance(ctx context.Context, address string, token string, amount int64) error {
+	// Use a transaction to ensure atomicity
+	_, err := r.client.Account.Update().
+		Where(
+			account.IDEQ(address),
+			account.TokenEQ(token),
+		).
+		AddAmount(float64(amount)).
+		Save(ctx)
+	if err != nil {
+		if ent.IsNotFound(err) {
+			return r.logger.Errorf("account %s with token %s not found: %v", address, token, err)
+		}
+		return r.logger.Errorf("failed to increment account balance for %s: %v", address, err)
+	}
+	r.logger.Infof("Incremented account balance for %s by %d", address, amount)
+
+	return nil
+}
+
+// AddTransfer implements Repository.
+func (r *RepositoryEnt) AddTransfer(ctx context.Context, transfer *model.Transfer) error {
+	_, err := r.client.Transfer.Create().
+		SetFromAddress(transfer.FromAddress).
+		SetToAddress(transfer.ToAddress).
+		SetToken(transfer.Token).
+		SetAmount(transfer.Amount).
+		SetDenom(transfer.Denom).
+		SetCreatedAt(time.Now()).
+		Save(ctx)
+	if err != nil {
+		return r.logger.Errorf("failed to add transfer from %s to %s: %v", transfer.FromAddress, transfer.ToAddress, err)
+	}
+
+	return nil
+}
+
+// AddTransfers implements Repository.
+func (r *RepositoryEnt) AddTransfers(ctx context.Context, transfers []model.Transfer) error {
+	_, err := r.client.Transfer.CreateBulk(
+		func() []*ent.TransferCreate {
+			bulk := make([]*ent.TransferCreate, len(transfers))
+			for i, transfer := range transfers {
+				bulk[i] = r.client.Transfer.Create().
+					SetFromAddress(transfer.FromAddress).
+					SetToAddress(transfer.ToAddress).
+					SetToken(transfer.Token).
+					SetAmount(transfer.Amount).
+					SetDenom(transfer.Denom).
+					SetCreatedAt(time.Now())
+			}
+			return bulk
+		}()...).
+		Save(ctx)
+	if err != nil {
+		return r.logger.Errorf("failed to add transfers: %v", err)
+	}
+	return nil
+}
+
+// GetTransfers implements Repository.
+func (r *RepositoryEnt) GetTransfers(ctx context.Context, fromAccountOr string, toAccountOr string, token string) ([]model.Transfer, error) {
+	transfers, err := r.client.Transfer.Query().
+		Where(
+			transfer.Or(
+				transfer.FromAddressEQ(fromAccountOr),
+				transfer.ToAddressEQ(toAccountOr),
+			),
+		).All(ctx)
+	if err != nil {
+		if ent.IsNotFound(err) {
+			return nil, nil // Transfer not found
+		}
+		return nil, r.logger.Errorf("failed to get transfer from %s to %s: %v", fromAccountOr, toAccountOr, err)
+	}
+
+	transferModels := make([]model.Transfer, len(transfers))
+	for i, entTransfer := range transfers {
+		transferModels[i] = model.Transfer{
+			FromAddress: entTransfer.FromAddress,
+			ToAddress:   entTransfer.ToAddress,
+			Token:       entTransfer.Token,
+			Amount:      entTransfer.Amount,
+			Denom:       entTransfer.Denom,
+			CreatedAt:   entTransfer.CreatedAt,
+		}
+	}
+	return transferModels, nil
+}
+
 // Conversion functions between model and schema types
 func convertMessagesToSchema(modelMessages []model.Message) []schema.Message {
 	schemaMessages := make([]schema.Message, len(modelMessages))
@@ -281,11 +409,22 @@ func convertMessagesToSchema(modelMessages []model.Message) []schema.Message {
 
 func convertResponseToSchema(modelResponse model.Response) schema.Response {
 	return schema.Response{
-		Log:    modelResponse.Log,
-		Info:   modelResponse.Info,
-		Error:  modelResponse.Error,
-		Data:   modelResponse.Data,
-		Events: modelResponse.Events,
+		Log:   modelResponse.Log,
+		Info:  modelResponse.Info,
+		Error: modelResponse.Error,
+		Data:  modelResponse.Data,
+		Events: func() []schema.Event {
+			events := make([]schema.Event, len(modelResponse.Events))
+			for i, event := range modelResponse.Events {
+				events[i] = schema.Event{
+					Type:    event.Type,
+					Func:    event.Func,
+					PkgPath: event.PkgPath,
+					Attrs:   event.Attrs,
+				}
+			}
+			return events
+		}(),
 	}
 }
 
@@ -303,10 +442,21 @@ func convertSchemaMessagesToModel(schemaMessages []schema.Message) []model.Messa
 
 func convertSchemaResponseToModel(schemaResponse schema.Response) model.Response {
 	return model.Response{
-		Log:    schemaResponse.Log,
-		Info:   schemaResponse.Info,
-		Error:  schemaResponse.Error,
-		Data:   schemaResponse.Data,
-		Events: schemaResponse.Events,
+		Log:   schemaResponse.Log,
+		Info:  schemaResponse.Info,
+		Error: schemaResponse.Error,
+		Data:  schemaResponse.Data,
+		Events: func(response schema.Response) []model.Event {
+			events := make([]model.Event, len(response.Events))
+			for i, event := range response.Events {
+				events[i] = model.Event{
+					Type:    event.Type,
+					Func:    event.Func,
+					PkgPath: event.PkgPath,
+					Attrs:   event.Attrs,
+				}
+			}
+			return events
+		}(schemaResponse),
 	}
 }

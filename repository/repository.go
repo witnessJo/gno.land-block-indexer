@@ -19,4 +19,14 @@ type Repository interface {
 	AddTransactions(ctx context.Context, blockNum int, txs []model.Transaction) error
 	GetTransaction(ctx context.Context, txHash string) (*model.Transaction, error)
 	GetTransactions(ctx context.Context, blockNum int, offset int, limit int) ([]model.Transaction, error)
+
+	// account operations
+	AddAccount(ctx context.Context, account *model.Account) error
+	GetAccount(ctx context.Context, address string, token string) (*model.Account, error)
+	IncrementAccountBalance(ctx context.Context, address string, token string, amount int64) error
+
+	// transfer operations
+	AddTransfer(ctx context.Context, transfer *model.Transfer) error
+	AddTransfers(ctx context.Context, transfers []model.Transfer) error
+	GetTransfers(ctx context.Context, fromAccount, toAccount, token string) ([]model.Transfer, error)
 }

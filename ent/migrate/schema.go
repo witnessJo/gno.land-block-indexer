@@ -85,16 +85,43 @@ var (
 			},
 		},
 	}
+	// TransfersColumns holds the columns for the "transfers" table.
+	TransfersColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeInt, Increment: true},
+		{Name: "from_address", Type: field.TypeString},
+		{Name: "to_address", Type: field.TypeString},
+		{Name: "token", Type: field.TypeString},
+		{Name: "amount", Type: field.TypeFloat64},
+		{Name: "denom", Type: field.TypeString},
+		{Name: "created_at", Type: field.TypeTime},
+		{Name: "account_transfers", Type: field.TypeString, Nullable: true},
+	}
+	// TransfersTable holds the schema information for the "transfers" table.
+	TransfersTable = &schema.Table{
+		Name:       "transfers",
+		Columns:    TransfersColumns,
+		PrimaryKey: []*schema.Column{TransfersColumns[0]},
+		ForeignKeys: []*schema.ForeignKey{
+			{
+				Symbol:     "transfers_accounts_transfers",
+				Columns:    []*schema.Column{TransfersColumns[7]},
+				RefColumns: []*schema.Column{AccountsColumns[0]},
+				OnDelete:   schema.SetNull,
+			},
+		},
+	}
 	// Tables holds all the tables in the schema.
 	Tables = []*schema.Table{
 		AccountsTable,
 		BlocksTable,
 		RestoreHistoriesTable,
 		TransactionsTable,
+		TransfersTable,
 	}
 )
 
 func init() {
 	TransactionsTable.ForeignKeys[0].RefTable = AccountsTable
 	TransactionsTable.ForeignKeys[1].RefTable = BlocksTable
+	TransfersTable.ForeignKeys[0].RefTable = AccountsTable
 }

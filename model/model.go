@@ -83,9 +83,35 @@ type Message struct {
 }
 
 type Response struct {
-	Log    string   `json:"log"`    // Log of the response
-	Info   string   `json:"info"`   // Info of the response
-	Error  string   `json:"error"`  // Error message if any
-	Data   string   `json:"data"`   // Data of the response
-	Events []string `json:"events"` // Events associated with the response
+	Log    string  `json:"log"`    // Log of the response
+	Info   string  `json:"info"`   // Info of the response
+	Error  string  `json:"error"`  // Error message if any
+	Data   string  `json:"data"`   // Data of the response
+	Events []Event `json:"events"` // Events associated with the response
+}
+
+type Event struct {
+	Type    string `json:"type"`
+	Func    string `json:"func"`
+	PkgPath string `json:"pkg_path"`
+	Attrs   []struct {
+		Key   string `json:"key"`
+		Value string `json:"value"`
+	} `json:"attrs"`
+}
+
+type Account struct {
+	Address   string    `json:"address"`    // Address of the account
+	Token     string    `json:"token"`      // Token associated with the account
+	Amount    float64   `json:"amount"`     // Amount of the token in the account
+	CreatedAt time.Time `json:"created_at"` // Creation time of the account
+}
+
+type Transfer struct {
+	FromAddress string    `json:"from_address"` // Address of the sender
+	ToAddress   string    `json:"to_address"`   // Address of the receiver
+	Token       string    `json:"token"`        // Token associated with the transfer
+	Amount      float64   `json:"amount"`       // Amount transferred
+	Denom       string    `json:"denom"`        // Denomination of the transferred amount
+	CreatedAt   time.Time `json:"created_at"`   // Creation time of the transfer
 }

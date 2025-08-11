@@ -31,9 +31,11 @@ type Account struct {
 type AccountEdges struct {
 	// Transactions holds the value of the transactions edge.
 	Transactions []*Transaction `json:"transactions,omitempty"`
+	// Transfers holds the value of the transfers edge.
+	Transfers []*Transfer `json:"transfers,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
-	loadedTypes [1]bool
+	loadedTypes [2]bool
 }
 
 // TransactionsOrErr returns the Transactions value or an error if the edge
@@ -43,6 +45,15 @@ func (e AccountEdges) TransactionsOrErr() ([]*Transaction, error) {
 		return e.Transactions, nil
 	}
 	return nil, &NotLoadedError{edge: "transactions"}
+}
+
+// TransfersOrErr returns the Transfers value or an error if the edge
+// was not loaded in eager-loading.
+func (e AccountEdges) TransfersOrErr() ([]*Transfer, error) {
+	if e.loadedTypes[1] {
+		return e.Transfers, nil
+	}
+	return nil, &NotLoadedError{edge: "transfers"}
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
@@ -103,6 +114,11 @@ func (_m *Account) Value(name string) (ent.Value, error) {
 // QueryTransactions queries the "transactions" edge of the Account entity.
 func (_m *Account) QueryTransactions() *TransactionQuery {
 	return NewAccountClient(_m.config).QueryTransactions(_m)
+}
+
+// QueryTransfers queries the "transfers" edge of the Account entity.
+func (_m *Account) QueryTransfers() *TransferQuery {
+	return NewAccountClient(_m.config).QueryTransfers(_m)
 }
 
 // Update returns a builder for updating this Account.
