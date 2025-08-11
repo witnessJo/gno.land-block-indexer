@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"time"
 
+	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
 	"gno.land-block-indexer/ent/block"
@@ -19,6 +20,7 @@ type BlockCreate struct {
 	config
 	mutation *BlockMutation
 	hooks    []Hook
+	conflict []sql.ConflictOption
 }
 
 // SetHash sets the "hash" field.
@@ -171,6 +173,7 @@ func (_c *BlockCreate) createSpec() (*Block, *sqlgraph.CreateSpec) {
 		_node = &Block{config: _c.config}
 		_spec = sqlgraph.NewCreateSpec(block.Table, sqlgraph.NewFieldSpec(block.FieldID, field.TypeInt))
 	)
+	_spec.OnConflict = _c.conflict
 	if id, ok := _c.mutation.ID(); ok {
 		_node.ID = id
 		_spec.ID.Value = id
@@ -214,11 +217,275 @@ func (_c *BlockCreate) createSpec() (*Block, *sqlgraph.CreateSpec) {
 	return _node, _spec
 }
 
+// OnConflict allows configuring the `ON CONFLICT` / `ON DUPLICATE KEY` clause
+// of the `INSERT` statement. For example:
+//
+//	client.Block.Create().
+//		SetHash(v).
+//		OnConflict(
+//			// Update the row with the new values
+//			// the was proposed for insertion.
+//			sql.ResolveWithNewValues(),
+//		).
+//		// Override some of the fields with custom
+//		// update values.
+//		Update(func(u *ent.BlockUpsert) {
+//			SetHash(v+v).
+//		}).
+//		Exec(ctx)
+func (_c *BlockCreate) OnConflict(opts ...sql.ConflictOption) *BlockUpsertOne {
+	_c.conflict = opts
+	return &BlockUpsertOne{
+		create: _c,
+	}
+}
+
+// OnConflictColumns calls `OnConflict` and configures the columns
+// as conflict target. Using this option is equivalent to using:
+//
+//	client.Block.Create().
+//		OnConflict(sql.ConflictColumns(columns...)).
+//		Exec(ctx)
+func (_c *BlockCreate) OnConflictColumns(columns ...string) *BlockUpsertOne {
+	_c.conflict = append(_c.conflict, sql.ConflictColumns(columns...))
+	return &BlockUpsertOne{
+		create: _c,
+	}
+}
+
+type (
+	// BlockUpsertOne is the builder for "upsert"-ing
+	//  one Block node.
+	BlockUpsertOne struct {
+		create *BlockCreate
+	}
+
+	// BlockUpsert is the "OnConflict" setter.
+	BlockUpsert struct {
+		*sql.UpdateSet
+	}
+)
+
+// SetHash sets the "hash" field.
+func (u *BlockUpsert) SetHash(v string) *BlockUpsert {
+	u.Set(block.FieldHash, v)
+	return u
+}
+
+// UpdateHash sets the "hash" field to the value that was provided on create.
+func (u *BlockUpsert) UpdateHash() *BlockUpsert {
+	u.SetExcluded(block.FieldHash)
+	return u
+}
+
+// SetTime sets the "time" field.
+func (u *BlockUpsert) SetTime(v time.Time) *BlockUpsert {
+	u.Set(block.FieldTime, v)
+	return u
+}
+
+// UpdateTime sets the "time" field to the value that was provided on create.
+func (u *BlockUpsert) UpdateTime() *BlockUpsert {
+	u.SetExcluded(block.FieldTime)
+	return u
+}
+
+// SetTotalTxs sets the "total_txs" field.
+func (u *BlockUpsert) SetTotalTxs(v int) *BlockUpsert {
+	u.Set(block.FieldTotalTxs, v)
+	return u
+}
+
+// UpdateTotalTxs sets the "total_txs" field to the value that was provided on create.
+func (u *BlockUpsert) UpdateTotalTxs() *BlockUpsert {
+	u.SetExcluded(block.FieldTotalTxs)
+	return u
+}
+
+// AddTotalTxs adds v to the "total_txs" field.
+func (u *BlockUpsert) AddTotalTxs(v int) *BlockUpsert {
+	u.Add(block.FieldTotalTxs, v)
+	return u
+}
+
+// SetNumTxs sets the "num_txs" field.
+func (u *BlockUpsert) SetNumTxs(v int) *BlockUpsert {
+	u.Set(block.FieldNumTxs, v)
+	return u
+}
+
+// UpdateNumTxs sets the "num_txs" field to the value that was provided on create.
+func (u *BlockUpsert) UpdateNumTxs() *BlockUpsert {
+	u.SetExcluded(block.FieldNumTxs)
+	return u
+}
+
+// AddNumTxs adds v to the "num_txs" field.
+func (u *BlockUpsert) AddNumTxs(v int) *BlockUpsert {
+	u.Add(block.FieldNumTxs, v)
+	return u
+}
+
+// UpdateNewValues updates the mutable fields using the new values that were set on create except the ID field.
+// Using this option is equivalent to using:
+//
+//	client.Block.Create().
+//		OnConflict(
+//			sql.ResolveWithNewValues(),
+//			sql.ResolveWith(func(u *sql.UpdateSet) {
+//				u.SetIgnore(block.FieldID)
+//			}),
+//		).
+//		Exec(ctx)
+func (u *BlockUpsertOne) UpdateNewValues() *BlockUpsertOne {
+	u.create.conflict = append(u.create.conflict, sql.ResolveWithNewValues())
+	u.create.conflict = append(u.create.conflict, sql.ResolveWith(func(s *sql.UpdateSet) {
+		if _, exists := u.create.mutation.ID(); exists {
+			s.SetIgnore(block.FieldID)
+		}
+		if _, exists := u.create.mutation.CreatedAt(); exists {
+			s.SetIgnore(block.FieldCreatedAt)
+		}
+	}))
+	return u
+}
+
+// Ignore sets each column to itself in case of conflict.
+// Using this option is equivalent to using:
+//
+//	client.Block.Create().
+//	    OnConflict(sql.ResolveWithIgnore()).
+//	    Exec(ctx)
+func (u *BlockUpsertOne) Ignore() *BlockUpsertOne {
+	u.create.conflict = append(u.create.conflict, sql.ResolveWithIgnore())
+	return u
+}
+
+// DoNothing configures the conflict_action to `DO NOTHING`.
+// Supported only by SQLite and PostgreSQL.
+func (u *BlockUpsertOne) DoNothing() *BlockUpsertOne {
+	u.create.conflict = append(u.create.conflict, sql.DoNothing())
+	return u
+}
+
+// Update allows overriding fields `UPDATE` values. See the BlockCreate.OnConflict
+// documentation for more info.
+func (u *BlockUpsertOne) Update(set func(*BlockUpsert)) *BlockUpsertOne {
+	u.create.conflict = append(u.create.conflict, sql.ResolveWith(func(update *sql.UpdateSet) {
+		set(&BlockUpsert{UpdateSet: update})
+	}))
+	return u
+}
+
+// SetHash sets the "hash" field.
+func (u *BlockUpsertOne) SetHash(v string) *BlockUpsertOne {
+	return u.Update(func(s *BlockUpsert) {
+		s.SetHash(v)
+	})
+}
+
+// UpdateHash sets the "hash" field to the value that was provided on create.
+func (u *BlockUpsertOne) UpdateHash() *BlockUpsertOne {
+	return u.Update(func(s *BlockUpsert) {
+		s.UpdateHash()
+	})
+}
+
+// SetTime sets the "time" field.
+func (u *BlockUpsertOne) SetTime(v time.Time) *BlockUpsertOne {
+	return u.Update(func(s *BlockUpsert) {
+		s.SetTime(v)
+	})
+}
+
+// UpdateTime sets the "time" field to the value that was provided on create.
+func (u *BlockUpsertOne) UpdateTime() *BlockUpsertOne {
+	return u.Update(func(s *BlockUpsert) {
+		s.UpdateTime()
+	})
+}
+
+// SetTotalTxs sets the "total_txs" field.
+func (u *BlockUpsertOne) SetTotalTxs(v int) *BlockUpsertOne {
+	return u.Update(func(s *BlockUpsert) {
+		s.SetTotalTxs(v)
+	})
+}
+
+// AddTotalTxs adds v to the "total_txs" field.
+func (u *BlockUpsertOne) AddTotalTxs(v int) *BlockUpsertOne {
+	return u.Update(func(s *BlockUpsert) {
+		s.AddTotalTxs(v)
+	})
+}
+
+// UpdateTotalTxs sets the "total_txs" field to the value that was provided on create.
+func (u *BlockUpsertOne) UpdateTotalTxs() *BlockUpsertOne {
+	return u.Update(func(s *BlockUpsert) {
+		s.UpdateTotalTxs()
+	})
+}
+
+// SetNumTxs sets the "num_txs" field.
+func (u *BlockUpsertOne) SetNumTxs(v int) *BlockUpsertOne {
+	return u.Update(func(s *BlockUpsert) {
+		s.SetNumTxs(v)
+	})
+}
+
+// AddNumTxs adds v to the "num_txs" field.
+func (u *BlockUpsertOne) AddNumTxs(v int) *BlockUpsertOne {
+	return u.Update(func(s *BlockUpsert) {
+		s.AddNumTxs(v)
+	})
+}
+
+// UpdateNumTxs sets the "num_txs" field to the value that was provided on create.
+func (u *BlockUpsertOne) UpdateNumTxs() *BlockUpsertOne {
+	return u.Update(func(s *BlockUpsert) {
+		s.UpdateNumTxs()
+	})
+}
+
+// Exec executes the query.
+func (u *BlockUpsertOne) Exec(ctx context.Context) error {
+	if len(u.create.conflict) == 0 {
+		return errors.New("ent: missing options for BlockCreate.OnConflict")
+	}
+	return u.create.Exec(ctx)
+}
+
+// ExecX is like Exec, but panics if an error occurs.
+func (u *BlockUpsertOne) ExecX(ctx context.Context) {
+	if err := u.create.Exec(ctx); err != nil {
+		panic(err)
+	}
+}
+
+// Exec executes the UPSERT query and returns the inserted/updated ID.
+func (u *BlockUpsertOne) ID(ctx context.Context) (id int, err error) {
+	node, err := u.create.Save(ctx)
+	if err != nil {
+		return id, err
+	}
+	return node.ID, nil
+}
+
+// IDX is like ID, but panics if an error occurs.
+func (u *BlockUpsertOne) IDX(ctx context.Context) int {
+	id, err := u.ID(ctx)
+	if err != nil {
+		panic(err)
+	}
+	return id
+}
+
 // BlockCreateBulk is the builder for creating many Block entities in bulk.
 type BlockCreateBulk struct {
 	config
 	err      error
 	builders []*BlockCreate
+	conflict []sql.ConflictOption
 }
 
 // Save creates the Block entities in the database.
@@ -248,6 +515,7 @@ func (_c *BlockCreateBulk) Save(ctx context.Context) ([]*Block, error) {
 					_, err = mutators[i+1].Mutate(root, _c.builders[i+1].mutation)
 				} else {
 					spec := &sqlgraph.BatchCreateSpec{Nodes: specs}
+					spec.OnConflict = _c.conflict
 					// Invoke the actual operation on the latest mutation in the chain.
 					if err = sqlgraph.BatchCreate(ctx, _c.driver, spec); err != nil {
 						if sqlgraph.IsConstraintError(err) {
@@ -298,6 +566,193 @@ func (_c *BlockCreateBulk) Exec(ctx context.Context) error {
 // ExecX is like Exec, but panics if an error occurs.
 func (_c *BlockCreateBulk) ExecX(ctx context.Context) {
 	if err := _c.Exec(ctx); err != nil {
+		panic(err)
+	}
+}
+
+// OnConflict allows configuring the `ON CONFLICT` / `ON DUPLICATE KEY` clause
+// of the `INSERT` statement. For example:
+//
+//	client.Block.CreateBulk(builders...).
+//		OnConflict(
+//			// Update the row with the new values
+//			// the was proposed for insertion.
+//			sql.ResolveWithNewValues(),
+//		).
+//		// Override some of the fields with custom
+//		// update values.
+//		Update(func(u *ent.BlockUpsert) {
+//			SetHash(v+v).
+//		}).
+//		Exec(ctx)
+func (_c *BlockCreateBulk) OnConflict(opts ...sql.ConflictOption) *BlockUpsertBulk {
+	_c.conflict = opts
+	return &BlockUpsertBulk{
+		create: _c,
+	}
+}
+
+// OnConflictColumns calls `OnConflict` and configures the columns
+// as conflict target. Using this option is equivalent to using:
+//
+//	client.Block.Create().
+//		OnConflict(sql.ConflictColumns(columns...)).
+//		Exec(ctx)
+func (_c *BlockCreateBulk) OnConflictColumns(columns ...string) *BlockUpsertBulk {
+	_c.conflict = append(_c.conflict, sql.ConflictColumns(columns...))
+	return &BlockUpsertBulk{
+		create: _c,
+	}
+}
+
+// BlockUpsertBulk is the builder for "upsert"-ing
+// a bulk of Block nodes.
+type BlockUpsertBulk struct {
+	create *BlockCreateBulk
+}
+
+// UpdateNewValues updates the mutable fields using the new values that
+// were set on create. Using this option is equivalent to using:
+//
+//	client.Block.Create().
+//		OnConflict(
+//			sql.ResolveWithNewValues(),
+//			sql.ResolveWith(func(u *sql.UpdateSet) {
+//				u.SetIgnore(block.FieldID)
+//			}),
+//		).
+//		Exec(ctx)
+func (u *BlockUpsertBulk) UpdateNewValues() *BlockUpsertBulk {
+	u.create.conflict = append(u.create.conflict, sql.ResolveWithNewValues())
+	u.create.conflict = append(u.create.conflict, sql.ResolveWith(func(s *sql.UpdateSet) {
+		for _, b := range u.create.builders {
+			if _, exists := b.mutation.ID(); exists {
+				s.SetIgnore(block.FieldID)
+			}
+			if _, exists := b.mutation.CreatedAt(); exists {
+				s.SetIgnore(block.FieldCreatedAt)
+			}
+		}
+	}))
+	return u
+}
+
+// Ignore sets each column to itself in case of conflict.
+// Using this option is equivalent to using:
+//
+//	client.Block.Create().
+//		OnConflict(sql.ResolveWithIgnore()).
+//		Exec(ctx)
+func (u *BlockUpsertBulk) Ignore() *BlockUpsertBulk {
+	u.create.conflict = append(u.create.conflict, sql.ResolveWithIgnore())
+	return u
+}
+
+// DoNothing configures the conflict_action to `DO NOTHING`.
+// Supported only by SQLite and PostgreSQL.
+func (u *BlockUpsertBulk) DoNothing() *BlockUpsertBulk {
+	u.create.conflict = append(u.create.conflict, sql.DoNothing())
+	return u
+}
+
+// Update allows overriding fields `UPDATE` values. See the BlockCreateBulk.OnConflict
+// documentation for more info.
+func (u *BlockUpsertBulk) Update(set func(*BlockUpsert)) *BlockUpsertBulk {
+	u.create.conflict = append(u.create.conflict, sql.ResolveWith(func(update *sql.UpdateSet) {
+		set(&BlockUpsert{UpdateSet: update})
+	}))
+	return u
+}
+
+// SetHash sets the "hash" field.
+func (u *BlockUpsertBulk) SetHash(v string) *BlockUpsertBulk {
+	return u.Update(func(s *BlockUpsert) {
+		s.SetHash(v)
+	})
+}
+
+// UpdateHash sets the "hash" field to the value that was provided on create.
+func (u *BlockUpsertBulk) UpdateHash() *BlockUpsertBulk {
+	return u.Update(func(s *BlockUpsert) {
+		s.UpdateHash()
+	})
+}
+
+// SetTime sets the "time" field.
+func (u *BlockUpsertBulk) SetTime(v time.Time) *BlockUpsertBulk {
+	return u.Update(func(s *BlockUpsert) {
+		s.SetTime(v)
+	})
+}
+
+// UpdateTime sets the "time" field to the value that was provided on create.
+func (u *BlockUpsertBulk) UpdateTime() *BlockUpsertBulk {
+	return u.Update(func(s *BlockUpsert) {
+		s.UpdateTime()
+	})
+}
+
+// SetTotalTxs sets the "total_txs" field.
+func (u *BlockUpsertBulk) SetTotalTxs(v int) *BlockUpsertBulk {
+	return u.Update(func(s *BlockUpsert) {
+		s.SetTotalTxs(v)
+	})
+}
+
+// AddTotalTxs adds v to the "total_txs" field.
+func (u *BlockUpsertBulk) AddTotalTxs(v int) *BlockUpsertBulk {
+	return u.Update(func(s *BlockUpsert) {
+		s.AddTotalTxs(v)
+	})
+}
+
+// UpdateTotalTxs sets the "total_txs" field to the value that was provided on create.
+func (u *BlockUpsertBulk) UpdateTotalTxs() *BlockUpsertBulk {
+	return u.Update(func(s *BlockUpsert) {
+		s.UpdateTotalTxs()
+	})
+}
+
+// SetNumTxs sets the "num_txs" field.
+func (u *BlockUpsertBulk) SetNumTxs(v int) *BlockUpsertBulk {
+	return u.Update(func(s *BlockUpsert) {
+		s.SetNumTxs(v)
+	})
+}
+
+// AddNumTxs adds v to the "num_txs" field.
+func (u *BlockUpsertBulk) AddNumTxs(v int) *BlockUpsertBulk {
+	return u.Update(func(s *BlockUpsert) {
+		s.AddNumTxs(v)
+	})
+}
+
+// UpdateNumTxs sets the "num_txs" field to the value that was provided on create.
+func (u *BlockUpsertBulk) UpdateNumTxs() *BlockUpsertBulk {
+	return u.Update(func(s *BlockUpsert) {
+		s.UpdateNumTxs()
+	})
+}
+
+// Exec executes the query.
+func (u *BlockUpsertBulk) Exec(ctx context.Context) error {
+	if u.create.err != nil {
+		return u.create.err
+	}
+	for i, b := range u.create.builders {
+		if len(b.conflict) != 0 {
+			return fmt.Errorf("ent: OnConflict was set for builder %d. Set it on the BlockCreateBulk instead", i)
+		}
+	}
+	if len(u.create.conflict) == 0 {
+		return errors.New("ent: missing options for BlockCreateBulk.OnConflict")
+	}
+	return u.create.Exec(ctx)
+}
+
+// ExecX is like Exec, but panics if an error occurs.
+func (u *BlockUpsertBulk) ExecX(ctx context.Context) {
+	if err := u.create.Exec(ctx); err != nil {
 		panic(err)
 	}
 }

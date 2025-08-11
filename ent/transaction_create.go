@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"time"
 
+	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
 	"gno.land-block-indexer/ent/block"
@@ -20,6 +21,7 @@ type TransactionCreate struct {
 	config
 	mutation *TransactionMutation
 	hooks    []Hook
+	conflict []sql.ConflictOption
 }
 
 // SetIndex sets the "index" field.
@@ -246,6 +248,7 @@ func (_c *TransactionCreate) createSpec() (*Transaction, *sqlgraph.CreateSpec) {
 		_node = &Transaction{config: _c.config}
 		_spec = sqlgraph.NewCreateSpec(transaction.Table, sqlgraph.NewFieldSpec(transaction.FieldID, field.TypeInt))
 	)
+	_spec.OnConflict = _c.conflict
 	if value, ok := _c.mutation.Index(); ok {
 		_spec.SetField(transaction.FieldIndex, field.TypeInt, value)
 		_node.Index = value
@@ -310,11 +313,503 @@ func (_c *TransactionCreate) createSpec() (*Transaction, *sqlgraph.CreateSpec) {
 	return _node, _spec
 }
 
+// OnConflict allows configuring the `ON CONFLICT` / `ON DUPLICATE KEY` clause
+// of the `INSERT` statement. For example:
+//
+//	client.Transaction.Create().
+//		SetIndex(v).
+//		OnConflict(
+//			// Update the row with the new values
+//			// the was proposed for insertion.
+//			sql.ResolveWithNewValues(),
+//		).
+//		// Override some of the fields with custom
+//		// update values.
+//		Update(func(u *ent.TransactionUpsert) {
+//			SetIndex(v+v).
+//		}).
+//		Exec(ctx)
+func (_c *TransactionCreate) OnConflict(opts ...sql.ConflictOption) *TransactionUpsertOne {
+	_c.conflict = opts
+	return &TransactionUpsertOne{
+		create: _c,
+	}
+}
+
+// OnConflictColumns calls `OnConflict` and configures the columns
+// as conflict target. Using this option is equivalent to using:
+//
+//	client.Transaction.Create().
+//		OnConflict(sql.ConflictColumns(columns...)).
+//		Exec(ctx)
+func (_c *TransactionCreate) OnConflictColumns(columns ...string) *TransactionUpsertOne {
+	_c.conflict = append(_c.conflict, sql.ConflictColumns(columns...))
+	return &TransactionUpsertOne{
+		create: _c,
+	}
+}
+
+type (
+	// TransactionUpsertOne is the builder for "upsert"-ing
+	//  one Transaction node.
+	TransactionUpsertOne struct {
+		create *TransactionCreate
+	}
+
+	// TransactionUpsert is the "OnConflict" setter.
+	TransactionUpsert struct {
+		*sql.UpdateSet
+	}
+)
+
+// SetIndex sets the "index" field.
+func (u *TransactionUpsert) SetIndex(v int) *TransactionUpsert {
+	u.Set(transaction.FieldIndex, v)
+	return u
+}
+
+// UpdateIndex sets the "index" field to the value that was provided on create.
+func (u *TransactionUpsert) UpdateIndex() *TransactionUpsert {
+	u.SetExcluded(transaction.FieldIndex)
+	return u
+}
+
+// AddIndex adds v to the "index" field.
+func (u *TransactionUpsert) AddIndex(v int) *TransactionUpsert {
+	u.Add(transaction.FieldIndex, v)
+	return u
+}
+
+// SetHash sets the "hash" field.
+func (u *TransactionUpsert) SetHash(v string) *TransactionUpsert {
+	u.Set(transaction.FieldHash, v)
+	return u
+}
+
+// UpdateHash sets the "hash" field to the value that was provided on create.
+func (u *TransactionUpsert) UpdateHash() *TransactionUpsert {
+	u.SetExcluded(transaction.FieldHash)
+	return u
+}
+
+// SetSuccess sets the "success" field.
+func (u *TransactionUpsert) SetSuccess(v bool) *TransactionUpsert {
+	u.Set(transaction.FieldSuccess, v)
+	return u
+}
+
+// UpdateSuccess sets the "success" field to the value that was provided on create.
+func (u *TransactionUpsert) UpdateSuccess() *TransactionUpsert {
+	u.SetExcluded(transaction.FieldSuccess)
+	return u
+}
+
+// SetBlockHeight sets the "block_height" field.
+func (u *TransactionUpsert) SetBlockHeight(v int) *TransactionUpsert {
+	u.Set(transaction.FieldBlockHeight, v)
+	return u
+}
+
+// UpdateBlockHeight sets the "block_height" field to the value that was provided on create.
+func (u *TransactionUpsert) UpdateBlockHeight() *TransactionUpsert {
+	u.SetExcluded(transaction.FieldBlockHeight)
+	return u
+}
+
+// AddBlockHeight adds v to the "block_height" field.
+func (u *TransactionUpsert) AddBlockHeight(v int) *TransactionUpsert {
+	u.Add(transaction.FieldBlockHeight, v)
+	return u
+}
+
+// SetGasWanted sets the "gas_wanted" field.
+func (u *TransactionUpsert) SetGasWanted(v float64) *TransactionUpsert {
+	u.Set(transaction.FieldGasWanted, v)
+	return u
+}
+
+// UpdateGasWanted sets the "gas_wanted" field to the value that was provided on create.
+func (u *TransactionUpsert) UpdateGasWanted() *TransactionUpsert {
+	u.SetExcluded(transaction.FieldGasWanted)
+	return u
+}
+
+// AddGasWanted adds v to the "gas_wanted" field.
+func (u *TransactionUpsert) AddGasWanted(v float64) *TransactionUpsert {
+	u.Add(transaction.FieldGasWanted, v)
+	return u
+}
+
+// SetGasUsed sets the "gas_used" field.
+func (u *TransactionUpsert) SetGasUsed(v float64) *TransactionUpsert {
+	u.Set(transaction.FieldGasUsed, v)
+	return u
+}
+
+// UpdateGasUsed sets the "gas_used" field to the value that was provided on create.
+func (u *TransactionUpsert) UpdateGasUsed() *TransactionUpsert {
+	u.SetExcluded(transaction.FieldGasUsed)
+	return u
+}
+
+// AddGasUsed adds v to the "gas_used" field.
+func (u *TransactionUpsert) AddGasUsed(v float64) *TransactionUpsert {
+	u.Add(transaction.FieldGasUsed, v)
+	return u
+}
+
+// SetMemo sets the "memo" field.
+func (u *TransactionUpsert) SetMemo(v string) *TransactionUpsert {
+	u.Set(transaction.FieldMemo, v)
+	return u
+}
+
+// UpdateMemo sets the "memo" field to the value that was provided on create.
+func (u *TransactionUpsert) UpdateMemo() *TransactionUpsert {
+	u.SetExcluded(transaction.FieldMemo)
+	return u
+}
+
+// ClearMemo clears the value of the "memo" field.
+func (u *TransactionUpsert) ClearMemo() *TransactionUpsert {
+	u.SetNull(transaction.FieldMemo)
+	return u
+}
+
+// SetGasFee sets the "gas_fee" field.
+func (u *TransactionUpsert) SetGasFee(v schema.GasFee) *TransactionUpsert {
+	u.Set(transaction.FieldGasFee, v)
+	return u
+}
+
+// UpdateGasFee sets the "gas_fee" field to the value that was provided on create.
+func (u *TransactionUpsert) UpdateGasFee() *TransactionUpsert {
+	u.SetExcluded(transaction.FieldGasFee)
+	return u
+}
+
+// ClearGasFee clears the value of the "gas_fee" field.
+func (u *TransactionUpsert) ClearGasFee() *TransactionUpsert {
+	u.SetNull(transaction.FieldGasFee)
+	return u
+}
+
+// SetMessages sets the "messages" field.
+func (u *TransactionUpsert) SetMessages(v []schema.Message) *TransactionUpsert {
+	u.Set(transaction.FieldMessages, v)
+	return u
+}
+
+// UpdateMessages sets the "messages" field to the value that was provided on create.
+func (u *TransactionUpsert) UpdateMessages() *TransactionUpsert {
+	u.SetExcluded(transaction.FieldMessages)
+	return u
+}
+
+// ClearMessages clears the value of the "messages" field.
+func (u *TransactionUpsert) ClearMessages() *TransactionUpsert {
+	u.SetNull(transaction.FieldMessages)
+	return u
+}
+
+// SetResponse sets the "response" field.
+func (u *TransactionUpsert) SetResponse(v schema.Response) *TransactionUpsert {
+	u.Set(transaction.FieldResponse, v)
+	return u
+}
+
+// UpdateResponse sets the "response" field to the value that was provided on create.
+func (u *TransactionUpsert) UpdateResponse() *TransactionUpsert {
+	u.SetExcluded(transaction.FieldResponse)
+	return u
+}
+
+// ClearResponse clears the value of the "response" field.
+func (u *TransactionUpsert) ClearResponse() *TransactionUpsert {
+	u.SetNull(transaction.FieldResponse)
+	return u
+}
+
+// UpdateNewValues updates the mutable fields using the new values that were set on create.
+// Using this option is equivalent to using:
+//
+//	client.Transaction.Create().
+//		OnConflict(
+//			sql.ResolveWithNewValues(),
+//		).
+//		Exec(ctx)
+func (u *TransactionUpsertOne) UpdateNewValues() *TransactionUpsertOne {
+	u.create.conflict = append(u.create.conflict, sql.ResolveWithNewValues())
+	u.create.conflict = append(u.create.conflict, sql.ResolveWith(func(s *sql.UpdateSet) {
+		if _, exists := u.create.mutation.CreatedAt(); exists {
+			s.SetIgnore(transaction.FieldCreatedAt)
+		}
+	}))
+	return u
+}
+
+// Ignore sets each column to itself in case of conflict.
+// Using this option is equivalent to using:
+//
+//	client.Transaction.Create().
+//	    OnConflict(sql.ResolveWithIgnore()).
+//	    Exec(ctx)
+func (u *TransactionUpsertOne) Ignore() *TransactionUpsertOne {
+	u.create.conflict = append(u.create.conflict, sql.ResolveWithIgnore())
+	return u
+}
+
+// DoNothing configures the conflict_action to `DO NOTHING`.
+// Supported only by SQLite and PostgreSQL.
+func (u *TransactionUpsertOne) DoNothing() *TransactionUpsertOne {
+	u.create.conflict = append(u.create.conflict, sql.DoNothing())
+	return u
+}
+
+// Update allows overriding fields `UPDATE` values. See the TransactionCreate.OnConflict
+// documentation for more info.
+func (u *TransactionUpsertOne) Update(set func(*TransactionUpsert)) *TransactionUpsertOne {
+	u.create.conflict = append(u.create.conflict, sql.ResolveWith(func(update *sql.UpdateSet) {
+		set(&TransactionUpsert{UpdateSet: update})
+	}))
+	return u
+}
+
+// SetIndex sets the "index" field.
+func (u *TransactionUpsertOne) SetIndex(v int) *TransactionUpsertOne {
+	return u.Update(func(s *TransactionUpsert) {
+		s.SetIndex(v)
+	})
+}
+
+// AddIndex adds v to the "index" field.
+func (u *TransactionUpsertOne) AddIndex(v int) *TransactionUpsertOne {
+	return u.Update(func(s *TransactionUpsert) {
+		s.AddIndex(v)
+	})
+}
+
+// UpdateIndex sets the "index" field to the value that was provided on create.
+func (u *TransactionUpsertOne) UpdateIndex() *TransactionUpsertOne {
+	return u.Update(func(s *TransactionUpsert) {
+		s.UpdateIndex()
+	})
+}
+
+// SetHash sets the "hash" field.
+func (u *TransactionUpsertOne) SetHash(v string) *TransactionUpsertOne {
+	return u.Update(func(s *TransactionUpsert) {
+		s.SetHash(v)
+	})
+}
+
+// UpdateHash sets the "hash" field to the value that was provided on create.
+func (u *TransactionUpsertOne) UpdateHash() *TransactionUpsertOne {
+	return u.Update(func(s *TransactionUpsert) {
+		s.UpdateHash()
+	})
+}
+
+// SetSuccess sets the "success" field.
+func (u *TransactionUpsertOne) SetSuccess(v bool) *TransactionUpsertOne {
+	return u.Update(func(s *TransactionUpsert) {
+		s.SetSuccess(v)
+	})
+}
+
+// UpdateSuccess sets the "success" field to the value that was provided on create.
+func (u *TransactionUpsertOne) UpdateSuccess() *TransactionUpsertOne {
+	return u.Update(func(s *TransactionUpsert) {
+		s.UpdateSuccess()
+	})
+}
+
+// SetBlockHeight sets the "block_height" field.
+func (u *TransactionUpsertOne) SetBlockHeight(v int) *TransactionUpsertOne {
+	return u.Update(func(s *TransactionUpsert) {
+		s.SetBlockHeight(v)
+	})
+}
+
+// AddBlockHeight adds v to the "block_height" field.
+func (u *TransactionUpsertOne) AddBlockHeight(v int) *TransactionUpsertOne {
+	return u.Update(func(s *TransactionUpsert) {
+		s.AddBlockHeight(v)
+	})
+}
+
+// UpdateBlockHeight sets the "block_height" field to the value that was provided on create.
+func (u *TransactionUpsertOne) UpdateBlockHeight() *TransactionUpsertOne {
+	return u.Update(func(s *TransactionUpsert) {
+		s.UpdateBlockHeight()
+	})
+}
+
+// SetGasWanted sets the "gas_wanted" field.
+func (u *TransactionUpsertOne) SetGasWanted(v float64) *TransactionUpsertOne {
+	return u.Update(func(s *TransactionUpsert) {
+		s.SetGasWanted(v)
+	})
+}
+
+// AddGasWanted adds v to the "gas_wanted" field.
+func (u *TransactionUpsertOne) AddGasWanted(v float64) *TransactionUpsertOne {
+	return u.Update(func(s *TransactionUpsert) {
+		s.AddGasWanted(v)
+	})
+}
+
+// UpdateGasWanted sets the "gas_wanted" field to the value that was provided on create.
+func (u *TransactionUpsertOne) UpdateGasWanted() *TransactionUpsertOne {
+	return u.Update(func(s *TransactionUpsert) {
+		s.UpdateGasWanted()
+	})
+}
+
+// SetGasUsed sets the "gas_used" field.
+func (u *TransactionUpsertOne) SetGasUsed(v float64) *TransactionUpsertOne {
+	return u.Update(func(s *TransactionUpsert) {
+		s.SetGasUsed(v)
+	})
+}
+
+// AddGasUsed adds v to the "gas_used" field.
+func (u *TransactionUpsertOne) AddGasUsed(v float64) *TransactionUpsertOne {
+	return u.Update(func(s *TransactionUpsert) {
+		s.AddGasUsed(v)
+	})
+}
+
+// UpdateGasUsed sets the "gas_used" field to the value that was provided on create.
+func (u *TransactionUpsertOne) UpdateGasUsed() *TransactionUpsertOne {
+	return u.Update(func(s *TransactionUpsert) {
+		s.UpdateGasUsed()
+	})
+}
+
+// SetMemo sets the "memo" field.
+func (u *TransactionUpsertOne) SetMemo(v string) *TransactionUpsertOne {
+	return u.Update(func(s *TransactionUpsert) {
+		s.SetMemo(v)
+	})
+}
+
+// UpdateMemo sets the "memo" field to the value that was provided on create.
+func (u *TransactionUpsertOne) UpdateMemo() *TransactionUpsertOne {
+	return u.Update(func(s *TransactionUpsert) {
+		s.UpdateMemo()
+	})
+}
+
+// ClearMemo clears the value of the "memo" field.
+func (u *TransactionUpsertOne) ClearMemo() *TransactionUpsertOne {
+	return u.Update(func(s *TransactionUpsert) {
+		s.ClearMemo()
+	})
+}
+
+// SetGasFee sets the "gas_fee" field.
+func (u *TransactionUpsertOne) SetGasFee(v schema.GasFee) *TransactionUpsertOne {
+	return u.Update(func(s *TransactionUpsert) {
+		s.SetGasFee(v)
+	})
+}
+
+// UpdateGasFee sets the "gas_fee" field to the value that was provided on create.
+func (u *TransactionUpsertOne) UpdateGasFee() *TransactionUpsertOne {
+	return u.Update(func(s *TransactionUpsert) {
+		s.UpdateGasFee()
+	})
+}
+
+// ClearGasFee clears the value of the "gas_fee" field.
+func (u *TransactionUpsertOne) ClearGasFee() *TransactionUpsertOne {
+	return u.Update(func(s *TransactionUpsert) {
+		s.ClearGasFee()
+	})
+}
+
+// SetMessages sets the "messages" field.
+func (u *TransactionUpsertOne) SetMessages(v []schema.Message) *TransactionUpsertOne {
+	return u.Update(func(s *TransactionUpsert) {
+		s.SetMessages(v)
+	})
+}
+
+// UpdateMessages sets the "messages" field to the value that was provided on create.
+func (u *TransactionUpsertOne) UpdateMessages() *TransactionUpsertOne {
+	return u.Update(func(s *TransactionUpsert) {
+		s.UpdateMessages()
+	})
+}
+
+// ClearMessages clears the value of the "messages" field.
+func (u *TransactionUpsertOne) ClearMessages() *TransactionUpsertOne {
+	return u.Update(func(s *TransactionUpsert) {
+		s.ClearMessages()
+	})
+}
+
+// SetResponse sets the "response" field.
+func (u *TransactionUpsertOne) SetResponse(v schema.Response) *TransactionUpsertOne {
+	return u.Update(func(s *TransactionUpsert) {
+		s.SetResponse(v)
+	})
+}
+
+// UpdateResponse sets the "response" field to the value that was provided on create.
+func (u *TransactionUpsertOne) UpdateResponse() *TransactionUpsertOne {
+	return u.Update(func(s *TransactionUpsert) {
+		s.UpdateResponse()
+	})
+}
+
+// ClearResponse clears the value of the "response" field.
+func (u *TransactionUpsertOne) ClearResponse() *TransactionUpsertOne {
+	return u.Update(func(s *TransactionUpsert) {
+		s.ClearResponse()
+	})
+}
+
+// Exec executes the query.
+func (u *TransactionUpsertOne) Exec(ctx context.Context) error {
+	if len(u.create.conflict) == 0 {
+		return errors.New("ent: missing options for TransactionCreate.OnConflict")
+	}
+	return u.create.Exec(ctx)
+}
+
+// ExecX is like Exec, but panics if an error occurs.
+func (u *TransactionUpsertOne) ExecX(ctx context.Context) {
+	if err := u.create.Exec(ctx); err != nil {
+		panic(err)
+	}
+}
+
+// Exec executes the UPSERT query and returns the inserted/updated ID.
+func (u *TransactionUpsertOne) ID(ctx context.Context) (id int, err error) {
+	node, err := u.create.Save(ctx)
+	if err != nil {
+		return id, err
+	}
+	return node.ID, nil
+}
+
+// IDX is like ID, but panics if an error occurs.
+func (u *TransactionUpsertOne) IDX(ctx context.Context) int {
+	id, err := u.ID(ctx)
+	if err != nil {
+		panic(err)
+	}
+	return id
+}
+
 // TransactionCreateBulk is the builder for creating many Transaction entities in bulk.
 type TransactionCreateBulk struct {
 	config
 	err      error
 	builders []*TransactionCreate
+	conflict []sql.ConflictOption
 }
 
 // Save creates the Transaction entities in the database.
@@ -344,6 +839,7 @@ func (_c *TransactionCreateBulk) Save(ctx context.Context) ([]*Transaction, erro
 					_, err = mutators[i+1].Mutate(root, _c.builders[i+1].mutation)
 				} else {
 					spec := &sqlgraph.BatchCreateSpec{Nodes: specs}
+					spec.OnConflict = _c.conflict
 					// Invoke the actual operation on the latest mutation in the chain.
 					if err = sqlgraph.BatchCreate(ctx, _c.driver, spec); err != nil {
 						if sqlgraph.IsConstraintError(err) {
@@ -394,6 +890,313 @@ func (_c *TransactionCreateBulk) Exec(ctx context.Context) error {
 // ExecX is like Exec, but panics if an error occurs.
 func (_c *TransactionCreateBulk) ExecX(ctx context.Context) {
 	if err := _c.Exec(ctx); err != nil {
+		panic(err)
+	}
+}
+
+// OnConflict allows configuring the `ON CONFLICT` / `ON DUPLICATE KEY` clause
+// of the `INSERT` statement. For example:
+//
+//	client.Transaction.CreateBulk(builders...).
+//		OnConflict(
+//			// Update the row with the new values
+//			// the was proposed for insertion.
+//			sql.ResolveWithNewValues(),
+//		).
+//		// Override some of the fields with custom
+//		// update values.
+//		Update(func(u *ent.TransactionUpsert) {
+//			SetIndex(v+v).
+//		}).
+//		Exec(ctx)
+func (_c *TransactionCreateBulk) OnConflict(opts ...sql.ConflictOption) *TransactionUpsertBulk {
+	_c.conflict = opts
+	return &TransactionUpsertBulk{
+		create: _c,
+	}
+}
+
+// OnConflictColumns calls `OnConflict` and configures the columns
+// as conflict target. Using this option is equivalent to using:
+//
+//	client.Transaction.Create().
+//		OnConflict(sql.ConflictColumns(columns...)).
+//		Exec(ctx)
+func (_c *TransactionCreateBulk) OnConflictColumns(columns ...string) *TransactionUpsertBulk {
+	_c.conflict = append(_c.conflict, sql.ConflictColumns(columns...))
+	return &TransactionUpsertBulk{
+		create: _c,
+	}
+}
+
+// TransactionUpsertBulk is the builder for "upsert"-ing
+// a bulk of Transaction nodes.
+type TransactionUpsertBulk struct {
+	create *TransactionCreateBulk
+}
+
+// UpdateNewValues updates the mutable fields using the new values that
+// were set on create. Using this option is equivalent to using:
+//
+//	client.Transaction.Create().
+//		OnConflict(
+//			sql.ResolveWithNewValues(),
+//		).
+//		Exec(ctx)
+func (u *TransactionUpsertBulk) UpdateNewValues() *TransactionUpsertBulk {
+	u.create.conflict = append(u.create.conflict, sql.ResolveWithNewValues())
+	u.create.conflict = append(u.create.conflict, sql.ResolveWith(func(s *sql.UpdateSet) {
+		for _, b := range u.create.builders {
+			if _, exists := b.mutation.CreatedAt(); exists {
+				s.SetIgnore(transaction.FieldCreatedAt)
+			}
+		}
+	}))
+	return u
+}
+
+// Ignore sets each column to itself in case of conflict.
+// Using this option is equivalent to using:
+//
+//	client.Transaction.Create().
+//		OnConflict(sql.ResolveWithIgnore()).
+//		Exec(ctx)
+func (u *TransactionUpsertBulk) Ignore() *TransactionUpsertBulk {
+	u.create.conflict = append(u.create.conflict, sql.ResolveWithIgnore())
+	return u
+}
+
+// DoNothing configures the conflict_action to `DO NOTHING`.
+// Supported only by SQLite and PostgreSQL.
+func (u *TransactionUpsertBulk) DoNothing() *TransactionUpsertBulk {
+	u.create.conflict = append(u.create.conflict, sql.DoNothing())
+	return u
+}
+
+// Update allows overriding fields `UPDATE` values. See the TransactionCreateBulk.OnConflict
+// documentation for more info.
+func (u *TransactionUpsertBulk) Update(set func(*TransactionUpsert)) *TransactionUpsertBulk {
+	u.create.conflict = append(u.create.conflict, sql.ResolveWith(func(update *sql.UpdateSet) {
+		set(&TransactionUpsert{UpdateSet: update})
+	}))
+	return u
+}
+
+// SetIndex sets the "index" field.
+func (u *TransactionUpsertBulk) SetIndex(v int) *TransactionUpsertBulk {
+	return u.Update(func(s *TransactionUpsert) {
+		s.SetIndex(v)
+	})
+}
+
+// AddIndex adds v to the "index" field.
+func (u *TransactionUpsertBulk) AddIndex(v int) *TransactionUpsertBulk {
+	return u.Update(func(s *TransactionUpsert) {
+		s.AddIndex(v)
+	})
+}
+
+// UpdateIndex sets the "index" field to the value that was provided on create.
+func (u *TransactionUpsertBulk) UpdateIndex() *TransactionUpsertBulk {
+	return u.Update(func(s *TransactionUpsert) {
+		s.UpdateIndex()
+	})
+}
+
+// SetHash sets the "hash" field.
+func (u *TransactionUpsertBulk) SetHash(v string) *TransactionUpsertBulk {
+	return u.Update(func(s *TransactionUpsert) {
+		s.SetHash(v)
+	})
+}
+
+// UpdateHash sets the "hash" field to the value that was provided on create.
+func (u *TransactionUpsertBulk) UpdateHash() *TransactionUpsertBulk {
+	return u.Update(func(s *TransactionUpsert) {
+		s.UpdateHash()
+	})
+}
+
+// SetSuccess sets the "success" field.
+func (u *TransactionUpsertBulk) SetSuccess(v bool) *TransactionUpsertBulk {
+	return u.Update(func(s *TransactionUpsert) {
+		s.SetSuccess(v)
+	})
+}
+
+// UpdateSuccess sets the "success" field to the value that was provided on create.
+func (u *TransactionUpsertBulk) UpdateSuccess() *TransactionUpsertBulk {
+	return u.Update(func(s *TransactionUpsert) {
+		s.UpdateSuccess()
+	})
+}
+
+// SetBlockHeight sets the "block_height" field.
+func (u *TransactionUpsertBulk) SetBlockHeight(v int) *TransactionUpsertBulk {
+	return u.Update(func(s *TransactionUpsert) {
+		s.SetBlockHeight(v)
+	})
+}
+
+// AddBlockHeight adds v to the "block_height" field.
+func (u *TransactionUpsertBulk) AddBlockHeight(v int) *TransactionUpsertBulk {
+	return u.Update(func(s *TransactionUpsert) {
+		s.AddBlockHeight(v)
+	})
+}
+
+// UpdateBlockHeight sets the "block_height" field to the value that was provided on create.
+func (u *TransactionUpsertBulk) UpdateBlockHeight() *TransactionUpsertBulk {
+	return u.Update(func(s *TransactionUpsert) {
+		s.UpdateBlockHeight()
+	})
+}
+
+// SetGasWanted sets the "gas_wanted" field.
+func (u *TransactionUpsertBulk) SetGasWanted(v float64) *TransactionUpsertBulk {
+	return u.Update(func(s *TransactionUpsert) {
+		s.SetGasWanted(v)
+	})
+}
+
+// AddGasWanted adds v to the "gas_wanted" field.
+func (u *TransactionUpsertBulk) AddGasWanted(v float64) *TransactionUpsertBulk {
+	return u.Update(func(s *TransactionUpsert) {
+		s.AddGasWanted(v)
+	})
+}
+
+// UpdateGasWanted sets the "gas_wanted" field to the value that was provided on create.
+func (u *TransactionUpsertBulk) UpdateGasWanted() *TransactionUpsertBulk {
+	return u.Update(func(s *TransactionUpsert) {
+		s.UpdateGasWanted()
+	})
+}
+
+// SetGasUsed sets the "gas_used" field.
+func (u *TransactionUpsertBulk) SetGasUsed(v float64) *TransactionUpsertBulk {
+	return u.Update(func(s *TransactionUpsert) {
+		s.SetGasUsed(v)
+	})
+}
+
+// AddGasUsed adds v to the "gas_used" field.
+func (u *TransactionUpsertBulk) AddGasUsed(v float64) *TransactionUpsertBulk {
+	return u.Update(func(s *TransactionUpsert) {
+		s.AddGasUsed(v)
+	})
+}
+
+// UpdateGasUsed sets the "gas_used" field to the value that was provided on create.
+func (u *TransactionUpsertBulk) UpdateGasUsed() *TransactionUpsertBulk {
+	return u.Update(func(s *TransactionUpsert) {
+		s.UpdateGasUsed()
+	})
+}
+
+// SetMemo sets the "memo" field.
+func (u *TransactionUpsertBulk) SetMemo(v string) *TransactionUpsertBulk {
+	return u.Update(func(s *TransactionUpsert) {
+		s.SetMemo(v)
+	})
+}
+
+// UpdateMemo sets the "memo" field to the value that was provided on create.
+func (u *TransactionUpsertBulk) UpdateMemo() *TransactionUpsertBulk {
+	return u.Update(func(s *TransactionUpsert) {
+		s.UpdateMemo()
+	})
+}
+
+// ClearMemo clears the value of the "memo" field.
+func (u *TransactionUpsertBulk) ClearMemo() *TransactionUpsertBulk {
+	return u.Update(func(s *TransactionUpsert) {
+		s.ClearMemo()
+	})
+}
+
+// SetGasFee sets the "gas_fee" field.
+func (u *TransactionUpsertBulk) SetGasFee(v schema.GasFee) *TransactionUpsertBulk {
+	return u.Update(func(s *TransactionUpsert) {
+		s.SetGasFee(v)
+	})
+}
+
+// UpdateGasFee sets the "gas_fee" field to the value that was provided on create.
+func (u *TransactionUpsertBulk) UpdateGasFee() *TransactionUpsertBulk {
+	return u.Update(func(s *TransactionUpsert) {
+		s.UpdateGasFee()
+	})
+}
+
+// ClearGasFee clears the value of the "gas_fee" field.
+func (u *TransactionUpsertBulk) ClearGasFee() *TransactionUpsertBulk {
+	return u.Update(func(s *TransactionUpsert) {
+		s.ClearGasFee()
+	})
+}
+
+// SetMessages sets the "messages" field.
+func (u *TransactionUpsertBulk) SetMessages(v []schema.Message) *TransactionUpsertBulk {
+	return u.Update(func(s *TransactionUpsert) {
+		s.SetMessages(v)
+	})
+}
+
+// UpdateMessages sets the "messages" field to the value that was provided on create.
+func (u *TransactionUpsertBulk) UpdateMessages() *TransactionUpsertBulk {
+	return u.Update(func(s *TransactionUpsert) {
+		s.UpdateMessages()
+	})
+}
+
+// ClearMessages clears the value of the "messages" field.
+func (u *TransactionUpsertBulk) ClearMessages() *TransactionUpsertBulk {
+	return u.Update(func(s *TransactionUpsert) {
+		s.ClearMessages()
+	})
+}
+
+// SetResponse sets the "response" field.
+func (u *TransactionUpsertBulk) SetResponse(v schema.Response) *TransactionUpsertBulk {
+	return u.Update(func(s *TransactionUpsert) {
+		s.SetResponse(v)
+	})
+}
+
+// UpdateResponse sets the "response" field to the value that was provided on create.
+func (u *TransactionUpsertBulk) UpdateResponse() *TransactionUpsertBulk {
+	return u.Update(func(s *TransactionUpsert) {
+		s.UpdateResponse()
+	})
+}
+
+// ClearResponse clears the value of the "response" field.
+func (u *TransactionUpsertBulk) ClearResponse() *TransactionUpsertBulk {
+	return u.Update(func(s *TransactionUpsert) {
+		s.ClearResponse()
+	})
+}
+
+// Exec executes the query.
+func (u *TransactionUpsertBulk) Exec(ctx context.Context) error {
+	if u.create.err != nil {
+		return u.create.err
+	}
+	for i, b := range u.create.builders {
+		if len(b.conflict) != 0 {
+			return fmt.Errorf("ent: OnConflict was set for builder %d. Set it on the TransactionCreateBulk instead", i)
+		}
+	}
+	if len(u.create.conflict) == 0 {
+		return errors.New("ent: missing options for TransactionCreateBulk.OnConflict")
+	}
+	return u.create.Exec(ctx)
+}
+
+// ExecX is like Exec, but panics if an error occurs.
+func (u *TransactionUpsertBulk) ExecX(ctx context.Context) {
+	if err := u.create.Exec(ctx); err != nil {
 		panic(err)
 	}
 }

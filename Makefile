@@ -15,7 +15,7 @@ ent-install:
 	go install entgo.io/ent/cmd/ent@latest
 
 ent:
-	ent generate ./ent/schema
+	ent generate --feature sql/upsert ./ent/schema
 
 infra:
 	./start-infra-compose.sh

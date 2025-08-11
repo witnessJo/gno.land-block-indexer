@@ -70,6 +70,7 @@ var Columns = []string{
 // ForeignKeys holds the SQL foreign-keys that are owned by the "transactions"
 // table and are not defined as standalone fields in the schema.
 var ForeignKeys = []string{
+	"account_transactions",
 	"block_transactions",
 }
 

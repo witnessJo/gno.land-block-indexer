@@ -8,6 +8,18 @@ import (
 )
 
 var (
+	// AccountsColumns holds the columns for the "accounts" table.
+	AccountsColumns = []*schema.Column{
+		{Name: "address", Type: field.TypeString},
+		{Name: "token", Type: field.TypeString},
+		{Name: "amount", Type: field.TypeFloat64},
+	}
+	// AccountsTable holds the schema information for the "accounts" table.
+	AccountsTable = &schema.Table{
+		Name:       "accounts",
+		Columns:    AccountsColumns,
+		PrimaryKey: []*schema.Column{AccountsColumns[0]},
+	}
 	// BlocksColumns holds the columns for the "blocks" table.
 	BlocksColumns = []*schema.Column{
 		{Name: "height", Type: field.TypeInt, Increment: true},
@@ -23,6 +35,19 @@ var (
 		Columns:    BlocksColumns,
 		PrimaryKey: []*schema.Column{BlocksColumns[0]},
 	}
+	// RestoreHistoriesColumns holds the columns for the "restore_histories" table.
+	RestoreHistoriesColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeInt, Increment: true},
+		{Name: "restore_range_start", Type: field.TypeInt},
+		{Name: "restore_range_end", Type: field.TypeInt},
+		{Name: "being_block", Type: field.TypeInt},
+	}
+	// RestoreHistoriesTable holds the schema information for the "restore_histories" table.
+	RestoreHistoriesTable = &schema.Table{
+		Name:       "restore_histories",
+		Columns:    RestoreHistoriesColumns,
+		PrimaryKey: []*schema.Column{RestoreHistoriesColumns[0]},
+	}
 	// TransactionsColumns holds the columns for the "transactions" table.
 	TransactionsColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeInt, Increment: true},
@@ -37,6 +62,7 @@ var (
 		{Name: "messages", Type: field.TypeJSON, Nullable: true},
 		{Name: "response", Type: field.TypeJSON, Nullable: true},
 		{Name: "created_at", Type: field.TypeTime},
+		{Name: "account_transactions", Type: field.TypeString, Nullable: true},
 		{Name: "block_transactions", Type: field.TypeInt, Nullable: true},
 	}
 	// TransactionsTable holds the schema information for the "transactions" table.
@@ -46,8 +72,14 @@ var (
 		PrimaryKey: []*schema.Column{TransactionsColumns[0]},
 		ForeignKeys: []*schema.ForeignKey{
 			{
-				Symbol:     "transactions_blocks_transactions",
+				Symbol:     "transactions_accounts_transactions",
 				Columns:    []*schema.Column{TransactionsColumns[12]},
+				RefColumns: []*schema.Column{AccountsColumns[0]},
+				OnDelete:   schema.SetNull,
+			},
+			{
+				Symbol:     "transactions_blocks_transactions",
+				Columns:    []*schema.Column{TransactionsColumns[13]},
 				RefColumns: []*schema.Column{BlocksColumns[0]},
 				OnDelete:   schema.SetNull,
 			},
@@ -55,11 +87,14 @@ var (
 	}
 	// Tables holds all the tables in the schema.
 	Tables = []*schema.Table{
+		AccountsTable,
 		BlocksTable,
+		RestoreHistoriesTable,
 		TransactionsTable,
 	}
 )
 
 func init() {
-	TransactionsTable.ForeignKeys[0].RefTable = BlocksTable
+	TransactionsTable.ForeignKeys[0].RefTable = AccountsTable
+	TransactionsTable.ForeignKeys[1].RefTable = BlocksTable
 }

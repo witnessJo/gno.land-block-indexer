@@ -12,7 +12,9 @@ import (
 	"entgo.io/ent"
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
+	"gno.land-block-indexer/ent/account"
 	"gno.land-block-indexer/ent/block"
+	"gno.land-block-indexer/ent/restorehistory"
 	"gno.land-block-indexer/ent/transaction"
 )
 
@@ -74,8 +76,10 @@ var (
 func checkColumn(t, c string) error {
 	initCheck.Do(func() {
 		columnCheck = sql.NewColumnCheck(map[string]func(string) bool{
-			block.Table:       block.ValidColumn,
-			transaction.Table: transaction.ValidColumn,
+			account.Table:        account.ValidColumn,
+			block.Table:          block.ValidColumn,
+			restorehistory.Table: restorehistory.ValidColumn,
+			transaction.Table:    transaction.ValidColumn,
 		})
 	})
 	return columnCheck(t, c)

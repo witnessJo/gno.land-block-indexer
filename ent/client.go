@@ -15,7 +15,9 @@ import (
 	"entgo.io/ent/dialect"
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
+	"gno.land-block-indexer/ent/account"
 	"gno.land-block-indexer/ent/block"
+	"gno.land-block-indexer/ent/restorehistory"
 	"gno.land-block-indexer/ent/transaction"
 )
 
@@ -24,8 +26,12 @@ type Client struct {
 	config
 	// Schema is the client for creating, migrating and dropping schema.
 	Schema *migrate.Schema
+	// Account is the client for interacting with the Account builders.
+	Account *AccountClient
 	// Block is the client for interacting with the Block builders.
 	Block *BlockClient
+	// RestoreHistory is the client for interacting with the RestoreHistory builders.
+	RestoreHistory *RestoreHistoryClient
 	// Transaction is the client for interacting with the Transaction builders.
 	Transaction *TransactionClient
 }
@@ -39,7 +45,9 @@ func NewClient(opts ...Option) *Client {
 
 func (c *Client) init() {
 	c.Schema = migrate.NewSchema(c.driver)
+	c.Account = NewAccountClient(c.config)
 	c.Block = NewBlockClient(c.config)
+	c.RestoreHistory = NewRestoreHistoryClient(c.config)
 	c.Transaction = NewTransactionClient(c.config)
 }
 
@@ -131,10 +139,12 @@ func (c *Client) Tx(ctx context.Context) (*Tx, error) {
 	cfg := c.config
 	cfg.driver = tx
 	return &Tx{
-		ctx:         ctx,
-		config:      cfg,
-		Block:       NewBlockClient(cfg),
-		Transaction: NewTransactionClient(cfg),
+		ctx:            ctx,
+		config:         cfg,
+		Account:        NewAccountClient(cfg),
+		Block:          NewBlockClient(cfg),
+		RestoreHistory: NewRestoreHistoryClient(cfg),
+		Transaction:    NewTransactionClient(cfg),
 	}, nil
 }
 
@@ -152,17 +162,19 @@ func (c *Client) BeginTx(ctx context.Context, opts *sql.TxOptions) (*Tx, error) 
 	cfg := c.config
 	cfg.driver = &txDriver{tx: tx, drv: c.driver}
 	return &Tx{
-		ctx:         ctx,
-		config:      cfg,
-		Block:       NewBlockClient(cfg),
-		Transaction: NewTransactionClient(cfg),
+		ctx:            ctx,
+		config:         cfg,
+		Account:        NewAccountClient(cfg),
+		Block:          NewBlockClient(cfg),
+		RestoreHistory: NewRestoreHistoryClient(cfg),
+		Transaction:    NewTransactionClient(cfg),
 	}, nil
 }
 
 // Debug returns a new debug-client. It's used to get verbose logging on specific operations.
 //
 //	client.Debug().
-//		Block.
+//		Account.
 //		Query().
 //		Count(ctx)
 func (c *Client) Debug() *Client {
@@ -184,26 +196,183 @@ func (c *Client) Close() error {
 // Use adds the mutation hooks to all the entity clients.
 // In order to add hooks to a specific client, call: `client.Node.Use(...)`.
 func (c *Client) Use(hooks ...Hook) {
+	c.Account.Use(hooks...)
 	c.Block.Use(hooks...)
+	c.RestoreHistory.Use(hooks...)
 	c.Transaction.Use(hooks...)
 }
 
 // Intercept adds the query interceptors to all the entity clients.
 // In order to add interceptors to a specific client, call: `client.Node.Intercept(...)`.
 func (c *Client) Intercept(interceptors ...Interceptor) {
+	c.Account.Intercept(interceptors...)
 	c.Block.Intercept(interceptors...)
+	c.RestoreHistory.Intercept(interceptors...)
 	c.Transaction.Intercept(interceptors...)
 }
 
 // Mutate implements the ent.Mutator interface.
 func (c *Client) Mutate(ctx context.Context, m Mutation) (Value, error) {
 	switch m := m.(type) {
+	case *AccountMutation:
+		return c.Account.mutate(ctx, m)
 	case *BlockMutation:
 		return c.Block.mutate(ctx, m)
+	case *RestoreHistoryMutation:
+		return c.RestoreHistory.mutate(ctx, m)
 	case *TransactionMutation:
 		return c.Transaction.mutate(ctx, m)
 	default:
 		return nil, fmt.Errorf("ent: unknown mutation type %T", m)
+	}
+}
+
+// AccountClient is a client for the Account schema.
+type AccountClient struct {
+	config
+}
+
+// NewAccountClient returns a client for the Account from the given config.
+func NewAccountClient(c config) *AccountClient {
+	return &AccountClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `account.Hooks(f(g(h())))`.
+func (c *AccountClient) Use(hooks ...Hook) {
+	c.hooks.Account = append(c.hooks.Account, hooks...)
+}
+
+// Intercept adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `account.Intercept(f(g(h())))`.
+func (c *AccountClient) Intercept(interceptors ...Interceptor) {
+	c.inters.Account = append(c.inters.Account, interceptors...)
+}
+
+// Create returns a builder for creating a Account entity.
+func (c *AccountClient) Create() *AccountCreate {
+	mutation := newAccountMutation(c.config, OpCreate)
+	return &AccountCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of Account entities.
+func (c *AccountClient) CreateBulk(builders ...*AccountCreate) *AccountCreateBulk {
+	return &AccountCreateBulk{config: c.config, builders: builders}
+}
+
+// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
+// a builder and applies setFunc on it.
+func (c *AccountClient) MapCreateBulk(slice any, setFunc func(*AccountCreate, int)) *AccountCreateBulk {
+	rv := reflect.ValueOf(slice)
+	if rv.Kind() != reflect.Slice {
+		return &AccountCreateBulk{err: fmt.Errorf("calling to AccountClient.MapCreateBulk with wrong type %T, need slice", slice)}
+	}
+	builders := make([]*AccountCreate, rv.Len())
+	for i := 0; i < rv.Len(); i++ {
+		builders[i] = c.Create()
+		setFunc(builders[i], i)
+	}
+	return &AccountCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for Account.
+func (c *AccountClient) Update() *AccountUpdate {
+	mutation := newAccountMutation(c.config, OpUpdate)
+	return &AccountUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *AccountClient) UpdateOne(_m *Account) *AccountUpdateOne {
+	mutation := newAccountMutation(c.config, OpUpdateOne, withAccount(_m))
+	return &AccountUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *AccountClient) UpdateOneID(id string) *AccountUpdateOne {
+	mutation := newAccountMutation(c.config, OpUpdateOne, withAccountID(id))
+	return &AccountUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for Account.
+func (c *AccountClient) Delete() *AccountDelete {
+	mutation := newAccountMutation(c.config, OpDelete)
+	return &AccountDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *AccountClient) DeleteOne(_m *Account) *AccountDeleteOne {
+	return c.DeleteOneID(_m.ID)
+}
+
+// DeleteOneID returns a builder for deleting the given entity by its id.
+func (c *AccountClient) DeleteOneID(id string) *AccountDeleteOne {
+	builder := c.Delete().Where(account.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &AccountDeleteOne{builder}
+}
+
+// Query returns a query builder for Account.
+func (c *AccountClient) Query() *AccountQuery {
+	return &AccountQuery{
+		config: c.config,
+		ctx:    &QueryContext{Type: TypeAccount},
+		inters: c.Interceptors(),
+	}
+}
+
+// Get returns a Account entity by its id.
+func (c *AccountClient) Get(ctx context.Context, id string) (*Account, error) {
+	return c.Query().Where(account.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *AccountClient) GetX(ctx context.Context, id string) *Account {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// QueryTransactions queries the transactions edge of a Account.
+func (c *AccountClient) QueryTransactions(_m *Account) *TransactionQuery {
+	query := (&TransactionClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(account.Table, account.FieldID, id),
+			sqlgraph.To(transaction.Table, transaction.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, account.TransactionsTable, account.TransactionsColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// Hooks returns the client hooks.
+func (c *AccountClient) Hooks() []Hook {
+	return c.hooks.Account
+}
+
+// Interceptors returns the client interceptors.
+func (c *AccountClient) Interceptors() []Interceptor {
+	return c.inters.Account
+}
+
+func (c *AccountClient) mutate(ctx context.Context, m *AccountMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&AccountCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&AccountUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&AccountUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&AccountDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("ent: unknown Account mutation op: %q", m.Op())
 	}
 }
 
@@ -353,6 +522,139 @@ func (c *BlockClient) mutate(ctx context.Context, m *BlockMutation) (Value, erro
 		return (&BlockDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
 	default:
 		return nil, fmt.Errorf("ent: unknown Block mutation op: %q", m.Op())
+	}
+}
+
+// RestoreHistoryClient is a client for the RestoreHistory schema.
+type RestoreHistoryClient struct {
+	config
+}
+
+// NewRestoreHistoryClient returns a client for the RestoreHistory from the given config.
+func NewRestoreHistoryClient(c config) *RestoreHistoryClient {
+	return &RestoreHistoryClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `restorehistory.Hooks(f(g(h())))`.
+func (c *RestoreHistoryClient) Use(hooks ...Hook) {
+	c.hooks.RestoreHistory = append(c.hooks.RestoreHistory, hooks...)
+}
+
+// Intercept adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `restorehistory.Intercept(f(g(h())))`.
+func (c *RestoreHistoryClient) Intercept(interceptors ...Interceptor) {
+	c.inters.RestoreHistory = append(c.inters.RestoreHistory, interceptors...)
+}
+
+// Create returns a builder for creating a RestoreHistory entity.
+func (c *RestoreHistoryClient) Create() *RestoreHistoryCreate {
+	mutation := newRestoreHistoryMutation(c.config, OpCreate)
+	return &RestoreHistoryCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of RestoreHistory entities.
+func (c *RestoreHistoryClient) CreateBulk(builders ...*RestoreHistoryCreate) *RestoreHistoryCreateBulk {
+	return &RestoreHistoryCreateBulk{config: c.config, builders: builders}
+}
+
+// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
+// a builder and applies setFunc on it.
+func (c *RestoreHistoryClient) MapCreateBulk(slice any, setFunc func(*RestoreHistoryCreate, int)) *RestoreHistoryCreateBulk {
+	rv := reflect.ValueOf(slice)
+	if rv.Kind() != reflect.Slice {
+		return &RestoreHistoryCreateBulk{err: fmt.Errorf("calling to RestoreHistoryClient.MapCreateBulk with wrong type %T, need slice", slice)}
+	}
+	builders := make([]*RestoreHistoryCreate, rv.Len())
+	for i := 0; i < rv.Len(); i++ {
+		builders[i] = c.Create()
+		setFunc(builders[i], i)
+	}
+	return &RestoreHistoryCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for RestoreHistory.
+func (c *RestoreHistoryClient) Update() *RestoreHistoryUpdate {
+	mutation := newRestoreHistoryMutation(c.config, OpUpdate)
+	return &RestoreHistoryUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *RestoreHistoryClient) UpdateOne(_m *RestoreHistory) *RestoreHistoryUpdateOne {
+	mutation := newRestoreHistoryMutation(c.config, OpUpdateOne, withRestoreHistory(_m))
+	return &RestoreHistoryUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *RestoreHistoryClient) UpdateOneID(id int) *RestoreHistoryUpdateOne {
+	mutation := newRestoreHistoryMutation(c.config, OpUpdateOne, withRestoreHistoryID(id))
+	return &RestoreHistoryUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for RestoreHistory.
+func (c *RestoreHistoryClient) Delete() *RestoreHistoryDelete {
+	mutation := newRestoreHistoryMutation(c.config, OpDelete)
+	return &RestoreHistoryDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *RestoreHistoryClient) DeleteOne(_m *RestoreHistory) *RestoreHistoryDeleteOne {
+	return c.DeleteOneID(_m.ID)
+}
+
+// DeleteOneID returns a builder for deleting the given entity by its id.
+func (c *RestoreHistoryClient) DeleteOneID(id int) *RestoreHistoryDeleteOne {
+	builder := c.Delete().Where(restorehistory.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &RestoreHistoryDeleteOne{builder}
+}
+
+// Query returns a query builder for RestoreHistory.
+func (c *RestoreHistoryClient) Query() *RestoreHistoryQuery {
+	return &RestoreHistoryQuery{
+		config: c.config,
+		ctx:    &QueryContext{Type: TypeRestoreHistory},
+		inters: c.Interceptors(),
+	}
+}
+
+// Get returns a RestoreHistory entity by its id.
+func (c *RestoreHistoryClient) Get(ctx context.Context, id int) (*RestoreHistory, error) {
+	return c.Query().Where(restorehistory.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *RestoreHistoryClient) GetX(ctx context.Context, id int) *RestoreHistory {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// Hooks returns the client hooks.
+func (c *RestoreHistoryClient) Hooks() []Hook {
+	return c.hooks.RestoreHistory
+}
+
+// Interceptors returns the client interceptors.
+func (c *RestoreHistoryClient) Interceptors() []Interceptor {
+	return c.inters.RestoreHistory
+}
+
+func (c *RestoreHistoryClient) mutate(ctx context.Context, m *RestoreHistoryMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&RestoreHistoryCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&RestoreHistoryUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&RestoreHistoryUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&RestoreHistoryDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("ent: unknown RestoreHistory mutation op: %q", m.Op())
 	}
 }
 
@@ -508,9 +810,9 @@ func (c *TransactionClient) mutate(ctx context.Context, m *TransactionMutation) 
 // hooks and interceptors per client, for fast access.
 type (
 	hooks struct {
-		Block, Transaction []ent.Hook
+		Account, Block, RestoreHistory, Transaction []ent.Hook
 	}
 	inters struct {
-		Block, Transaction []ent.Interceptor
+		Account, Block, RestoreHistory, Transaction []ent.Interceptor
 	}
 )

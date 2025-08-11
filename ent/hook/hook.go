@@ -9,6 +9,18 @@ import (
 	"gno.land-block-indexer/ent"
 )
 
+// The AccountFunc type is an adapter to allow the use of ordinary
+// function as Account mutator.
+type AccountFunc func(context.Context, *ent.AccountMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f AccountFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.AccountMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.AccountMutation", m)
+}
+
 // The BlockFunc type is an adapter to allow the use of ordinary
 // function as Block mutator.
 type BlockFunc func(context.Context, *ent.BlockMutation) (ent.Value, error)
@@ -19,6 +31,18 @@ func (f BlockFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error
 		return f(ctx, mv)
 	}
 	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.BlockMutation", m)
+}
+
+// The RestoreHistoryFunc type is an adapter to allow the use of ordinary
+// function as RestoreHistory mutator.
+type RestoreHistoryFunc func(context.Context, *ent.RestoreHistoryMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f RestoreHistoryFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.RestoreHistoryMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.RestoreHistoryMutation", m)
 }
 
 // The TransactionFunc type is an adapter to allow the use of ordinary

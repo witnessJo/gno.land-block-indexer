@@ -6,8 +6,14 @@ import (
 	"entgo.io/ent/dialect/sql"
 )
 
+// Account is the predicate function for account builders.
+type Account func(*sql.Selector)
+
 // Block is the predicate function for block builders.
 type Block func(*sql.Selector)
+
+// RestoreHistory is the predicate function for restorehistory builders.
+type RestoreHistory func(*sql.Selector)
 
 // Transaction is the predicate function for transaction builders.
 type Transaction func(*sql.Selector)

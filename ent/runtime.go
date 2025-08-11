@@ -5,6 +5,7 @@ package ent
 import (
 	"time"
 
+	"gno.land-block-indexer/ent/account"
 	"gno.land-block-indexer/ent/block"
 	"gno.land-block-indexer/ent/schema"
 	"gno.land-block-indexer/ent/transaction"
@@ -14,6 +15,16 @@ import (
 // (default values, validators, hooks and policies) and stitches it
 // to their package variables.
 func init() {
+	accountFields := schema.Account{}.Fields()
+	_ = accountFields
+	// accountDescToken is the schema descriptor for token field.
+	accountDescToken := accountFields[1].Descriptor()
+	// account.TokenValidator is a validator for the "token" field. It is called by the builders before save.
+	account.TokenValidator = accountDescToken.Validators[0].(func(string) error)
+	// accountDescID is the schema descriptor for id field.
+	accountDescID := accountFields[0].Descriptor()
+	// account.IDValidator is a validator for the "id" field. It is called by the builders before save.
+	account.IDValidator = accountDescID.Validators[0].(func(string) error)
 	blockFields := schema.Block{}.Fields()
 	_ = blockFields
 	// blockDescHash is the schema descriptor for hash field.

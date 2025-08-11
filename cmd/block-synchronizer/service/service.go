@@ -141,6 +141,12 @@ func (s *service) RestoreMissingBlockAndTransactions(ctx context.Context) error 
 			s.logger.Infof("No more blocks to poll, stopping")
 			break
 		}
+
+		err = s.repoBs.SaveRestoringHistory(ctx, i, i+100)
+		if err != nil {
+			return s.logger.Errorf("failed to save restoring history for block %d: %v", i, err)
+		}
+
 		s.logger.Infof("Polled %d blocks starting from height %d", len(blocks), i)
 
 		transactions, err := s.PollTransactions(i, 100)
@@ -219,7 +225,7 @@ func (s *service) SubscribeAndPush(ctx context.Context) error {
 			// Send to worker pool (non-blocking)
 			select {
 			case workCh <- block:
-				// Block sent to worker successfully
+			// Block sent to worker successfully
 			default:
 				// Worker pool is full, drop block and log
 				s.logger.Warnf("Worker pool full, dropping block: Height=%d", block.Height)
@@ -327,16 +333,20 @@ func (s *service) PollBlocks(offset int, limit int) ([]model.Block, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
+	// Debug: Log GraphQL request
 	if err := s.client.Run(ctx, req, &resp); err != nil {
-		return nil, fmt.Errorf("failed to execute GraphQL query: %w", err)
+		// Debug: Log raw response if possible
+		s.logger.Errorf("GraphQL request failed. Error: %v", err)
+		reqData, err := json.MarshalIndent(req, "", "  ")
+		if err != nil {
+			return nil, fmt.Errorf("failed to marshal GraphQL request: %w", err)
+		}
+		return nil, fmt.Errorf("failed to execute GraphQL query: %v", reqData)
 	}
 
 	// 변환
 	blocks := make([]model.Block, 0, len(resp.GetBlocks))
 	for _, b := range resp.GetBlocks {
-		// fmt.Printf("Block: %s, Height: %d, Time: %s, TotalTxs: %d, NumTxs: %d\n",
-		// b.Hash, b.Height, b.Time, b.TotalTxs, b.NumTxs)
-
 		parsedTime, err := time.Parse(time.RFC3339, b.Time)
 		if err != nil {
 			s.logger.Infof("failed to parse time %s: %v", b.Time, err)
@@ -511,8 +521,14 @@ func (s *service) PollTransactions(blockOffset int, limit int) ([]model.Transact
 	defer cancel()
 
 	if err := s.client.Run(ctx, req, &resp); err != nil {
-		return nil, fmt.Errorf("failed to execute GraphQL query: %w", err)
+		// Debug: Log detailed error information
+		s.logger.Errorf("GraphQL transaction request failed. Error: %v", err)
+		reqData, _ := json.MarshalIndent(req, "", "  ")
+		return nil, fmt.Errorf("failed to execute GraphQL query: %v, query: %s", err, reqData)
 	}
+
+	// Debug: Log successful response
+	s.logger.Infof("GraphQL Transaction Response: Found %d transactions", len(resp.GetTransactions))
 
 	// 변환
 	transactions := make([]model.Transaction, 0, len(resp.GetTransactions))
@@ -816,36 +832,12 @@ func getInt(m map[string]any, key string) int {
 	return 0
 }
 
-// GetMissingBlocks implements Service.
-func (s *service) GetMissingBlocks() ([]model.Block, error) {
-	ctx := context.Background()
-	blocks, err := s.repo.GetBlocks(ctx, 0, 100)
-	if err != nil {
-		s.logger.Infof("failed to get blocks: %v", err)
-		return nil, err
-	}
-
-	result := make([]model.Block, len(blocks))
-	for i, block := range blocks {
-		result[i] = block
-	}
-	return result, nil
-}
-
 // GetBlocksMissingTxCount implements Service.
 func (s *service) GetBlocksMissingTxCount() ([]model.Block, error) {
-	ctx := context.Background()
-	blocks, err := s.repo.GetBlocks(ctx, 0, 100)
-	if err != nil {
-		s.logger.Infof("failed to get blocks: %v", err)
-		return nil, err
-	}
+	panic("unimplemented")
+}
 
-	var missingTxBlocks []model.Block
-	for _, block := range blocks {
-		if block.NumTxs == 0 && block.TotalTxs > 0 {
-			missingTxBlocks = append(missingTxBlocks, block)
-		}
-	}
-	return missingTxBlocks, nil
+// GetMissingBlocks implements Service.
+func (s *service) GetMissingBlocks() ([]model.Block, error) {
+	panic("unimplemented")
 }
