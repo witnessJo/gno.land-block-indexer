@@ -130,6 +130,7 @@ func (s *service) processBlockWithTransactions(ctx context.Context, blockWithTxs
 
 	s.logger.Infof("Successfully processed block %d with %d transactions",
 		blockWithTxs.Block.Height, len(blockWithTxs.Transactions))
+
 	return nil
 
 }

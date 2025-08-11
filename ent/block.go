@@ -16,11 +16,10 @@ import (
 type Block struct {
 	config `json:"-"`
 	// ID of the ent.
+	// Height of the block used as primary key
 	ID int `json:"id,omitempty"`
 	// Hash of the block
 	Hash string `json:"hash,omitempty"`
-	// Height of the block
-	Height int `json:"height,omitempty"`
 	// Timestamp of the block
 	Time time.Time `json:"time,omitempty"`
 	// Total number of transactions in the block
@@ -58,7 +57,7 @@ func (*Block) scanValues(columns []string) ([]any, error) {
 	values := make([]any, len(columns))
 	for i := range columns {
 		switch columns[i] {
-		case block.FieldID, block.FieldHeight, block.FieldTotalTxs, block.FieldNumTxs:
+		case block.FieldID, block.FieldTotalTxs, block.FieldNumTxs:
 			values[i] = new(sql.NullInt64)
 		case block.FieldHash:
 			values[i] = new(sql.NullString)
@@ -90,12 +89,6 @@ func (_m *Block) assignValues(columns []string, values []any) error {
 				return fmt.Errorf("unexpected type %T for field hash", values[i])
 			} else if value.Valid {
 				_m.Hash = value.String
-			}
-		case block.FieldHeight:
-			if value, ok := values[i].(*sql.NullInt64); !ok {
-				return fmt.Errorf("unexpected type %T for field height", values[i])
-			} else if value.Valid {
-				_m.Height = int(value.Int64)
 			}
 		case block.FieldTime:
 			if value, ok := values[i].(*sql.NullTime); !ok {
@@ -164,9 +157,6 @@ func (_m *Block) String() string {
 	builder.WriteString(fmt.Sprintf("id=%v, ", _m.ID))
 	builder.WriteString("hash=")
 	builder.WriteString(_m.Hash)
-	builder.WriteString(", ")
-	builder.WriteString("height=")
-	builder.WriteString(fmt.Sprintf("%v", _m.Height))
 	builder.WriteString(", ")
 	builder.WriteString("time=")
 	builder.WriteString(_m.Time.Format(time.ANSIC))

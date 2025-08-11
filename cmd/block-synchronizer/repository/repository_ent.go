@@ -51,7 +51,7 @@ func (r *repositoryBsEnt) GetNotSequentialBlockNum(ctx context.Context, limit in
 		endHeight := startBlockHeight + batchSize - 1
 		count, err := r.client.Block.
 			Query().
-			Where(block.HeightGTE(startBlockHeight), block.HeightLTE(endHeight)).
+			Where(block.IDGTE(startBlockHeight), block.IDLTE(endHeight)).
 			Count(ctx)
 		if err != nil {
 			r.logger.Errorf("failed to count blocks from %d to %d: %v", startBlockHeight, endHeight, err)
@@ -73,8 +73,8 @@ func (r *repositoryBsEnt) GetNotSequentialBlockNum(ctx context.Context, limit in
 
 	// We need find exactly the first non-sequential block
 	candidateBlocks, err := r.client.Block.Query().
-		Where(block.HeightGTE(startBlockHeight)).
-		Order(ent.Asc(block.FieldHeight)).
+		Where(block.IDGTE(startBlockHeight)).
+		Order(ent.Asc(block.FieldID)).
 		Limit(batchSize).
 		All(ctx)
 	if err != nil {
@@ -87,8 +87,8 @@ func (r *repositoryBsEnt) GetNotSequentialBlockNum(ctx context.Context, limit in
 	}
 
 	for _, b := range candidateBlocks {
-		if b.Height != startBlockHeight {
-			r.logger.Infof("found non-sequential block at height %d, expected %d", b.Height, startBlockHeight)
+		if b.ID != startBlockHeight {
+			r.logger.Infof("found non-sequential block at height %d, expected %d", b.ID, startBlockHeight)
 			return startBlockHeight - 1, nil
 		}
 		startBlockHeight++

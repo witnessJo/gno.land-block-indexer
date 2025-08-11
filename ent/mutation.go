@@ -37,8 +37,6 @@ type BlockMutation struct {
 	typ                 string
 	id                  *int
 	hash                *string
-	height              *int
-	addheight           *int
 	time                *time.Time
 	total_txs           *int
 	addtotal_txs        *int
@@ -124,6 +122,12 @@ func (m BlockMutation) Tx() (*Tx, error) {
 	return tx, nil
 }
 
+// SetID sets the value of the id field. Note that this
+// operation is only accepted on creation of Block entities.
+func (m *BlockMutation) SetID(id int) {
+	m.id = &id
+}
+
 // ID returns the ID value in the mutation. Note that the ID is only available
 // if it was provided to the builder or after it was returned from the database.
 func (m *BlockMutation) ID() (id int, exists bool) {
@@ -186,62 +190,6 @@ func (m *BlockMutation) OldHash(ctx context.Context) (v string, err error) {
 // ResetHash resets all changes to the "hash" field.
 func (m *BlockMutation) ResetHash() {
 	m.hash = nil
-}
-
-// SetHeight sets the "height" field.
-func (m *BlockMutation) SetHeight(i int) {
-	m.height = &i
-	m.addheight = nil
-}
-
-// Height returns the value of the "height" field in the mutation.
-func (m *BlockMutation) Height() (r int, exists bool) {
-	v := m.height
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// OldHeight returns the old "height" field's value of the Block entity.
-// If the Block object wasn't provided to the builder, the object is fetched from the database.
-// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *BlockMutation) OldHeight(ctx context.Context) (v int, err error) {
-	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldHeight is only allowed on UpdateOne operations")
-	}
-	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldHeight requires an ID field in the mutation")
-	}
-	oldValue, err := m.oldValue(ctx)
-	if err != nil {
-		return v, fmt.Errorf("querying old value for OldHeight: %w", err)
-	}
-	return oldValue.Height, nil
-}
-
-// AddHeight adds i to the "height" field.
-func (m *BlockMutation) AddHeight(i int) {
-	if m.addheight != nil {
-		*m.addheight += i
-	} else {
-		m.addheight = &i
-	}
-}
-
-// AddedHeight returns the value that was added to the "height" field in this mutation.
-func (m *BlockMutation) AddedHeight() (r int, exists bool) {
-	v := m.addheight
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// ResetHeight resets all changes to the "height" field.
-func (m *BlockMutation) ResetHeight() {
-	m.height = nil
-	m.addheight = nil
 }
 
 // SetTime sets the "time" field.
@@ -516,12 +464,9 @@ func (m *BlockMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *BlockMutation) Fields() []string {
-	fields := make([]string, 0, 6)
+	fields := make([]string, 0, 5)
 	if m.hash != nil {
 		fields = append(fields, block.FieldHash)
-	}
-	if m.height != nil {
-		fields = append(fields, block.FieldHeight)
 	}
 	if m.time != nil {
 		fields = append(fields, block.FieldTime)
@@ -545,8 +490,6 @@ func (m *BlockMutation) Field(name string) (ent.Value, bool) {
 	switch name {
 	case block.FieldHash:
 		return m.Hash()
-	case block.FieldHeight:
-		return m.Height()
 	case block.FieldTime:
 		return m.Time()
 	case block.FieldTotalTxs:
@@ -566,8 +509,6 @@ func (m *BlockMutation) OldField(ctx context.Context, name string) (ent.Value, e
 	switch name {
 	case block.FieldHash:
 		return m.OldHash(ctx)
-	case block.FieldHeight:
-		return m.OldHeight(ctx)
 	case block.FieldTime:
 		return m.OldTime(ctx)
 	case block.FieldTotalTxs:
@@ -591,13 +532,6 @@ func (m *BlockMutation) SetField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetHash(v)
-		return nil
-	case block.FieldHeight:
-		v, ok := value.(int)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.SetHeight(v)
 		return nil
 	case block.FieldTime:
 		v, ok := value.(time.Time)
@@ -635,9 +569,6 @@ func (m *BlockMutation) SetField(name string, value ent.Value) error {
 // this mutation.
 func (m *BlockMutation) AddedFields() []string {
 	var fields []string
-	if m.addheight != nil {
-		fields = append(fields, block.FieldHeight)
-	}
 	if m.addtotal_txs != nil {
 		fields = append(fields, block.FieldTotalTxs)
 	}
@@ -652,8 +583,6 @@ func (m *BlockMutation) AddedFields() []string {
 // was not set, or was not defined in the schema.
 func (m *BlockMutation) AddedField(name string) (ent.Value, bool) {
 	switch name {
-	case block.FieldHeight:
-		return m.AddedHeight()
 	case block.FieldTotalTxs:
 		return m.AddedTotalTxs()
 	case block.FieldNumTxs:
@@ -667,13 +596,6 @@ func (m *BlockMutation) AddedField(name string) (ent.Value, bool) {
 // type.
 func (m *BlockMutation) AddField(name string, value ent.Value) error {
 	switch name {
-	case block.FieldHeight:
-		v, ok := value.(int)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.AddHeight(v)
-		return nil
 	case block.FieldTotalTxs:
 		v, ok := value.(int)
 		if !ok {
@@ -717,9 +639,6 @@ func (m *BlockMutation) ResetField(name string) error {
 	switch name {
 	case block.FieldHash:
 		m.ResetHash()
-		return nil
-	case block.FieldHeight:
-		m.ResetHeight()
 		return nil
 	case block.FieldTime:
 		m.ResetTime()

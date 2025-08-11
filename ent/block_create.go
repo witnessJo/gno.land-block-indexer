@@ -27,12 +27,6 @@ func (_c *BlockCreate) SetHash(v string) *BlockCreate {
 	return _c
 }
 
-// SetHeight sets the "height" field.
-func (_c *BlockCreate) SetHeight(v int) *BlockCreate {
-	_c.mutation.SetHeight(v)
-	return _c
-}
-
 // SetTime sets the "time" field.
 func (_c *BlockCreate) SetTime(v time.Time) *BlockCreate {
 	_c.mutation.SetTime(v)
@@ -62,6 +56,12 @@ func (_c *BlockCreate) SetNillableCreatedAt(v *time.Time) *BlockCreate {
 	if v != nil {
 		_c.SetCreatedAt(*v)
 	}
+	return _c
+}
+
+// SetID sets the "id" field.
+func (_c *BlockCreate) SetID(v int) *BlockCreate {
+	_c.mutation.SetID(v)
 	return _c
 }
 
@@ -131,9 +131,6 @@ func (_c *BlockCreate) check() error {
 			return &ValidationError{Name: "hash", err: fmt.Errorf(`ent: validator failed for field "Block.hash": %w`, err)}
 		}
 	}
-	if _, ok := _c.mutation.Height(); !ok {
-		return &ValidationError{Name: "height", err: errors.New(`ent: missing required field "Block.height"`)}
-	}
 	if _, ok := _c.mutation.Time(); !ok {
 		return &ValidationError{Name: "time", err: errors.New(`ent: missing required field "Block.time"`)}
 	}
@@ -160,8 +157,10 @@ func (_c *BlockCreate) sqlSave(ctx context.Context) (*Block, error) {
 		}
 		return nil, err
 	}
-	id := _spec.ID.Value.(int64)
-	_node.ID = int(id)
+	if _spec.ID.Value != _node.ID {
+		id := _spec.ID.Value.(int64)
+		_node.ID = int(id)
+	}
 	_c.mutation.id = &_node.ID
 	_c.mutation.done = true
 	return _node, nil
@@ -172,13 +171,13 @@ func (_c *BlockCreate) createSpec() (*Block, *sqlgraph.CreateSpec) {
 		_node = &Block{config: _c.config}
 		_spec = sqlgraph.NewCreateSpec(block.Table, sqlgraph.NewFieldSpec(block.FieldID, field.TypeInt))
 	)
+	if id, ok := _c.mutation.ID(); ok {
+		_node.ID = id
+		_spec.ID.Value = id
+	}
 	if value, ok := _c.mutation.Hash(); ok {
 		_spec.SetField(block.FieldHash, field.TypeString, value)
 		_node.Hash = value
-	}
-	if value, ok := _c.mutation.Height(); ok {
-		_spec.SetField(block.FieldHeight, field.TypeInt, value)
-		_node.Height = value
 	}
 	if value, ok := _c.mutation.Time(); ok {
 		_spec.SetField(block.FieldTime, field.TypeTime, value)
@@ -260,7 +259,7 @@ func (_c *BlockCreateBulk) Save(ctx context.Context) ([]*Block, error) {
 					return nil, err
 				}
 				mutation.id = &nodes[i].ID
-				if specs[i].ID.Value != nil {
+				if specs[i].ID.Value != nil && nodes[i].ID == 0 {
 					id := specs[i].ID.Value.(int64)
 					nodes[i].ID = int(id)
 				}

@@ -1,10 +1,12 @@
+// Transaction.go - Transaction 스키마
 package schema
 
 import (
+	"time"
+
 	"entgo.io/ent"
 	"entgo.io/ent/schema/edge"
 	"entgo.io/ent/schema/field"
-	"time"
 )
 
 // Transaction holds the schema definition for the Transaction entity.
@@ -13,20 +15,22 @@ type Transaction struct {
 }
 
 type GasFee struct {
-	Amount float64 `json:"amount"` // Amount of gas fee
-	Denom  string  `json:"denom"`  // Denomination of the gas fee
+	Amount float64 `json:"amount"`
+	Denom  string  `json:"denom"`
 }
+
 type Message struct {
-	Route   string      `json:"route"`   // Route of the message
-	TypeUrl string      `json:"typeUrl"` // Type URL of the message
-	Value   interface{} `json:"value"`   // Value of the message, can be of different types
+	Route   string      `json:"route"`
+	TypeUrl string      `json:"typeUrl"`
+	Value   interface{} `json:"value"`
 }
+
 type Response struct {
-	Log    string   `json:"log"`    // Log of the response
-	Info   string   `json:"info"`   // Info of the response
-	Error  string   `json:"error"`  // Error message if any
-	Data   string   `json:"data"`   // Data of the response
-	Events []string `json:"events"` // Events associated with the responsed
+	Log    string   `json:"log"`
+	Info   string   `json:"info"`
+	Error  string   `json:"error"`
+	Data   string   `json:"data"`
+	Events []string `json:"events"`
 }
 
 // Fields of the Transaction.

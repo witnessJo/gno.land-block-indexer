@@ -13,11 +13,9 @@ const (
 	// Label holds the string label denoting the block type in the database.
 	Label = "block"
 	// FieldID holds the string denoting the id field in the database.
-	FieldID = "id"
+	FieldID = "height"
 	// FieldHash holds the string denoting the hash field in the database.
 	FieldHash = "hash"
-	// FieldHeight holds the string denoting the height field in the database.
-	FieldHeight = "height"
 	// FieldTime holds the string denoting the time field in the database.
 	FieldTime = "time"
 	// FieldTotalTxs holds the string denoting the total_txs field in the database.
@@ -28,6 +26,8 @@ const (
 	FieldCreatedAt = "created_at"
 	// EdgeTransactions holds the string denoting the transactions edge name in mutations.
 	EdgeTransactions = "transactions"
+	// TransactionFieldID holds the string denoting the ID field of the Transaction.
+	TransactionFieldID = "id"
 	// Table holds the table name of the block in the database.
 	Table = "blocks"
 	// TransactionsTable is the table that holds the transactions relation/edge.
@@ -43,7 +43,6 @@ const (
 var Columns = []string{
 	FieldID,
 	FieldHash,
-	FieldHeight,
 	FieldTime,
 	FieldTotalTxs,
 	FieldNumTxs,
@@ -78,11 +77,6 @@ func ByID(opts ...sql.OrderTermOption) OrderOption {
 // ByHash orders the results by the hash field.
 func ByHash(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldHash, opts...).ToFunc()
-}
-
-// ByHeight orders the results by the height field.
-func ByHeight(opts ...sql.OrderTermOption) OrderOption {
-	return sql.OrderByField(FieldHeight, opts...).ToFunc()
 }
 
 // ByTime orders the results by the time field.
@@ -121,7 +115,7 @@ func ByTransactions(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
 func newTransactionsStep() *sqlgraph.Step {
 	return sqlgraph.NewStep(
 		sqlgraph.From(Table, FieldID),
-		sqlgraph.To(TransactionsInverseTable, FieldID),
+		sqlgraph.To(TransactionsInverseTable, TransactionFieldID),
 		sqlgraph.Edge(sqlgraph.O2M, false, TransactionsTable, TransactionsColumn),
 	)
 }

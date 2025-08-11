@@ -43,27 +43,6 @@ func (_u *BlockUpdate) SetNillableHash(v *string) *BlockUpdate {
 	return _u
 }
 
-// SetHeight sets the "height" field.
-func (_u *BlockUpdate) SetHeight(v int) *BlockUpdate {
-	_u.mutation.ResetHeight()
-	_u.mutation.SetHeight(v)
-	return _u
-}
-
-// SetNillableHeight sets the "height" field if the given value is not nil.
-func (_u *BlockUpdate) SetNillableHeight(v *int) *BlockUpdate {
-	if v != nil {
-		_u.SetHeight(*v)
-	}
-	return _u
-}
-
-// AddHeight adds value to the "height" field.
-func (_u *BlockUpdate) AddHeight(v int) *BlockUpdate {
-	_u.mutation.AddHeight(v)
-	return _u
-}
-
 // SetTime sets the "time" field.
 func (_u *BlockUpdate) SetTime(v time.Time) *BlockUpdate {
 	_u.mutation.SetTime(v)
@@ -213,12 +192,6 @@ func (_u *BlockUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 	if value, ok := _u.mutation.Hash(); ok {
 		_spec.SetField(block.FieldHash, field.TypeString, value)
 	}
-	if value, ok := _u.mutation.Height(); ok {
-		_spec.SetField(block.FieldHeight, field.TypeInt, value)
-	}
-	if value, ok := _u.mutation.AddedHeight(); ok {
-		_spec.AddField(block.FieldHeight, field.TypeInt, value)
-	}
 	if value, ok := _u.mutation.Time(); ok {
 		_spec.SetField(block.FieldTime, field.TypeTime, value)
 	}
@@ -310,27 +283,6 @@ func (_u *BlockUpdateOne) SetNillableHash(v *string) *BlockUpdateOne {
 	if v != nil {
 		_u.SetHash(*v)
 	}
-	return _u
-}
-
-// SetHeight sets the "height" field.
-func (_u *BlockUpdateOne) SetHeight(v int) *BlockUpdateOne {
-	_u.mutation.ResetHeight()
-	_u.mutation.SetHeight(v)
-	return _u
-}
-
-// SetNillableHeight sets the "height" field if the given value is not nil.
-func (_u *BlockUpdateOne) SetNillableHeight(v *int) *BlockUpdateOne {
-	if v != nil {
-		_u.SetHeight(*v)
-	}
-	return _u
-}
-
-// AddHeight adds value to the "height" field.
-func (_u *BlockUpdateOne) AddHeight(v int) *BlockUpdateOne {
-	_u.mutation.AddHeight(v)
 	return _u
 }
 
@@ -512,12 +464,6 @@ func (_u *BlockUpdateOne) sqlSave(ctx context.Context) (_node *Block, err error)
 	}
 	if value, ok := _u.mutation.Hash(); ok {
 		_spec.SetField(block.FieldHash, field.TypeString, value)
-	}
-	if value, ok := _u.mutation.Height(); ok {
-		_spec.SetField(block.FieldHeight, field.TypeInt, value)
-	}
-	if value, ok := _u.mutation.AddedHeight(); ok {
-		_spec.AddField(block.FieldHeight, field.TypeInt, value)
 	}
 	if value, ok := _u.mutation.Time(); ok {
 		_spec.SetField(block.FieldTime, field.TypeTime, value)

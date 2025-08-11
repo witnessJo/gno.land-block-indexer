@@ -60,7 +60,7 @@ func (r *RepositoryEnt) GetHighestBlock(ctx context.Context) (*model.Block, erro
 	}
 	return &model.Block{
 		Hash:     entBlock.Hash,
-		Height:   entBlock.Height,
+		Height:   entBlock.ID,
 		Time:     entBlock.Time,
 		TotalTxs: entBlock.TotalTxs,
 		NumTxs:   entBlock.NumTxs,
@@ -73,7 +73,8 @@ func (r *RepositoryEnt) AddBlock(ctx context.Context, block *model.Block) error 
 	// Use the ent client to create the block in the database
 	_, err := r.client.Block.Create().
 		SetHash(block.Hash).
-		SetHeight(block.Height).
+		SetID(block.Height). // Use Height as ID for uniqueness")
+		// SetHeight(block.Height).
 		SetTime(block.Time).
 		SetTotalTxs(block.TotalTxs).
 		SetNumTxs(block.NumTxs).
@@ -96,7 +97,7 @@ func (r *RepositoryEnt) AddBlocks(ctx context.Context, blocks []*model.Block) er
 	for i, block := range blocks {
 		bulk[i] = r.client.Block.Create().
 			SetHash(block.Hash).
-			SetHeight(block.Height).
+			SetID(block.Height).
 			SetTime(block.Time).
 			SetTotalTxs(block.TotalTxs).
 			SetNumTxs(block.NumTxs).
@@ -166,7 +167,7 @@ func (r *RepositoryEnt) AddTransactions(ctx context.Context, blockNum int, txs [
 // GetBlock implements Repository.
 func (r *RepositoryEnt) GetBlock(ctx context.Context, blockNum int) (*model.Block, error) {
 	entBlock, err := r.client.Block.Query().
-		Where(block.HeightEQ(blockNum)).
+		Where(block.IDEQ(blockNum)).
 		Only(ctx)
 	if err != nil {
 		return nil, r.logger.Errorf("failed to get block %d: %v", blockNum, err)
@@ -174,7 +175,7 @@ func (r *RepositoryEnt) GetBlock(ctx context.Context, blockNum int) (*model.Bloc
 
 	return &model.Block{
 		Hash:     entBlock.Hash,
-		Height:   entBlock.Height,
+		Height:   entBlock.ID,
 		Time:     entBlock.Time,
 		TotalTxs: entBlock.TotalTxs,
 		NumTxs:   entBlock.NumTxs,
@@ -196,7 +197,7 @@ func (r *RepositoryEnt) GetBlocks(ctx context.Context, offset int, limit int) ([
 	for i, entBlock := range entBlocks {
 		blocks[i] = model.Block{
 			Hash:     entBlock.Hash,
-			Height:   entBlock.Height,
+			Height:   entBlock.ID,
 			Time:     entBlock.Time,
 			TotalTxs: entBlock.TotalTxs,
 			NumTxs:   entBlock.NumTxs,

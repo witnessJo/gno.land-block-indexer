@@ -60,11 +60,6 @@ func Hash(v string) predicate.Block {
 	return predicate.Block(sql.FieldEQ(FieldHash, v))
 }
 
-// Height applies equality check predicate on the "height" field. It's identical to HeightEQ.
-func Height(v int) predicate.Block {
-	return predicate.Block(sql.FieldEQ(FieldHeight, v))
-}
-
 // Time applies equality check predicate on the "time" field. It's identical to TimeEQ.
 func Time(v time.Time) predicate.Block {
 	return predicate.Block(sql.FieldEQ(FieldTime, v))
@@ -148,46 +143,6 @@ func HashEqualFold(v string) predicate.Block {
 // HashContainsFold applies the ContainsFold predicate on the "hash" field.
 func HashContainsFold(v string) predicate.Block {
 	return predicate.Block(sql.FieldContainsFold(FieldHash, v))
-}
-
-// HeightEQ applies the EQ predicate on the "height" field.
-func HeightEQ(v int) predicate.Block {
-	return predicate.Block(sql.FieldEQ(FieldHeight, v))
-}
-
-// HeightNEQ applies the NEQ predicate on the "height" field.
-func HeightNEQ(v int) predicate.Block {
-	return predicate.Block(sql.FieldNEQ(FieldHeight, v))
-}
-
-// HeightIn applies the In predicate on the "height" field.
-func HeightIn(vs ...int) predicate.Block {
-	return predicate.Block(sql.FieldIn(FieldHeight, vs...))
-}
-
-// HeightNotIn applies the NotIn predicate on the "height" field.
-func HeightNotIn(vs ...int) predicate.Block {
-	return predicate.Block(sql.FieldNotIn(FieldHeight, vs...))
-}
-
-// HeightGT applies the GT predicate on the "height" field.
-func HeightGT(v int) predicate.Block {
-	return predicate.Block(sql.FieldGT(FieldHeight, v))
-}
-
-// HeightGTE applies the GTE predicate on the "height" field.
-func HeightGTE(v int) predicate.Block {
-	return predicate.Block(sql.FieldGTE(FieldHeight, v))
-}
-
-// HeightLT applies the LT predicate on the "height" field.
-func HeightLT(v int) predicate.Block {
-	return predicate.Block(sql.FieldLT(FieldHeight, v))
-}
-
-// HeightLTE applies the LTE predicate on the "height" field.
-func HeightLTE(v int) predicate.Block {
-	return predicate.Block(sql.FieldLTE(FieldHeight, v))
 }
 
 // TimeEQ applies the EQ predicate on the "time" field.

@@ -38,6 +38,8 @@ const (
 	FieldCreatedAt = "created_at"
 	// EdgeBlock holds the string denoting the block edge name in mutations.
 	EdgeBlock = "block"
+	// BlockFieldID holds the string denoting the ID field of the Block.
+	BlockFieldID = "height"
 	// Table holds the table name of the transaction in the database.
 	Table = "transactions"
 	// BlockTable is the table that holds the block relation/edge.
@@ -152,7 +154,7 @@ func ByBlockField(field string, opts ...sql.OrderTermOption) OrderOption {
 func newBlockStep() *sqlgraph.Step {
 	return sqlgraph.NewStep(
 		sqlgraph.From(Table, FieldID),
-		sqlgraph.To(BlockInverseTable, FieldID),
+		sqlgraph.To(BlockInverseTable, BlockFieldID),
 		sqlgraph.Edge(sqlgraph.M2O, true, BlockTable, BlockColumn),
 	)
 }

@@ -10,9 +10,8 @@ import (
 var (
 	// BlocksColumns holds the columns for the "blocks" table.
 	BlocksColumns = []*schema.Column{
-		{Name: "id", Type: field.TypeInt, Increment: true},
+		{Name: "height", Type: field.TypeInt, Increment: true},
 		{Name: "hash", Type: field.TypeString},
-		{Name: "height", Type: field.TypeInt, Unique: true},
 		{Name: "time", Type: field.TypeTime},
 		{Name: "total_txs", Type: field.TypeInt},
 		{Name: "num_txs", Type: field.TypeInt},

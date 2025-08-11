@@ -17,7 +17,7 @@ func init() {
 	blockFields := schema.Block{}.Fields()
 	_ = blockFields
 	// blockDescHash is the schema descriptor for hash field.
-	blockDescHash := blockFields[0].Descriptor()
+	blockDescHash := blockFields[1].Descriptor()
 	// block.HashValidator is a validator for the "hash" field. It is called by the builders before save.
 	block.HashValidator = blockDescHash.Validators[0].(func(string) error)
 	// blockDescCreatedAt is the schema descriptor for created_at field.
