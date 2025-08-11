@@ -130,6 +130,7 @@ func (r *RepositoryEnt) AddTransaction(ctx context.Context, blockNum int, tx *mo
 		SetGasFee(schema.GasFee(tx.GasFee)).
 		SetMessages(convertMessagesToSchema(tx.Messages)).
 		SetResponse(convertResponseToSchema(tx.Response)).
+		SetBlockID(blockNum).
 		SetCreatedAt(time.Now()).
 		Save(ctx)
 	if err != nil {
@@ -158,6 +159,7 @@ func (r *RepositoryEnt) AddTransactions(ctx context.Context, blockNum int, txs [
 			SetGasFee(schema.GasFee(tx.GasFee)).
 			SetMessages(convertMessagesToSchema(tx.Messages)).
 			SetResponse(convertResponseToSchema(tx.Response)).
+			SetBlockID(blockNum).
 			SetCreatedAt(time.Now())
 	}
 

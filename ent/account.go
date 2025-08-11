@@ -29,28 +29,17 @@ type Account struct {
 
 // AccountEdges holds the relations/edges for other nodes in the graph.
 type AccountEdges struct {
-	// Transactions holds the value of the transactions edge.
-	Transactions []*Transaction `json:"transactions,omitempty"`
 	// Transfers holds the value of the transfers edge.
 	Transfers []*Transfer `json:"transfers,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
-	loadedTypes [2]bool
-}
-
-// TransactionsOrErr returns the Transactions value or an error if the edge
-// was not loaded in eager-loading.
-func (e AccountEdges) TransactionsOrErr() ([]*Transaction, error) {
-	if e.loadedTypes[0] {
-		return e.Transactions, nil
-	}
-	return nil, &NotLoadedError{edge: "transactions"}
+	loadedTypes [1]bool
 }
 
 // TransfersOrErr returns the Transfers value or an error if the edge
 // was not loaded in eager-loading.
 func (e AccountEdges) TransfersOrErr() ([]*Transfer, error) {
-	if e.loadedTypes[1] {
+	if e.loadedTypes[0] {
 		return e.Transfers, nil
 	}
 	return nil, &NotLoadedError{edge: "transfers"}
@@ -109,11 +98,6 @@ func (_m *Account) assignValues(columns []string, values []any) error {
 // This includes values selected through modifiers, order, etc.
 func (_m *Account) Value(name string) (ent.Value, error) {
 	return _m.selectValues.Get(name)
-}
-
-// QueryTransactions queries the "transactions" edge of the Account entity.
-func (_m *Account) QueryTransactions() *TransactionQuery {
-	return NewAccountClient(_m.config).QueryTransactions(_m)
 }
 
 // QueryTransfers queries the "transfers" edge of the Account entity.

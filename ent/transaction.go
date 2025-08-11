@@ -44,10 +44,9 @@ type Transaction struct {
 	CreatedAt time.Time `json:"created_at,omitempty"`
 	// Edges holds the relations/edges for other nodes in the graph.
 	// The values are being populated by the TransactionQuery when eager-loading is set.
-	Edges                TransactionEdges `json:"edges"`
-	account_transactions *string
-	block_transactions   *int
-	selectValues         sql.SelectValues
+	Edges              TransactionEdges `json:"edges"`
+	block_transactions *int
+	selectValues       sql.SelectValues
 }
 
 // TransactionEdges holds the relations/edges for other nodes in the graph.
@@ -87,9 +86,7 @@ func (*Transaction) scanValues(columns []string) ([]any, error) {
 			values[i] = new(sql.NullString)
 		case transaction.FieldCreatedAt:
 			values[i] = new(sql.NullTime)
-		case transaction.ForeignKeys[0]: // account_transactions
-			values[i] = new(sql.NullString)
-		case transaction.ForeignKeys[1]: // block_transactions
+		case transaction.ForeignKeys[0]: // block_transactions
 			values[i] = new(sql.NullInt64)
 		default:
 			values[i] = new(sql.UnknownType)
@@ -185,13 +182,6 @@ func (_m *Transaction) assignValues(columns []string, values []any) error {
 				_m.CreatedAt = value.Time
 			}
 		case transaction.ForeignKeys[0]:
-			if value, ok := values[i].(*sql.NullString); !ok {
-				return fmt.Errorf("unexpected type %T for field account_transactions", values[i])
-			} else if value.Valid {
-				_m.account_transactions = new(string)
-				*_m.account_transactions = value.String
-			}
-		case transaction.ForeignKeys[1]:
 			if value, ok := values[i].(*sql.NullInt64); !ok {
 				return fmt.Errorf("unexpected type %T for edge-field block_transactions", value)
 			} else if value.Valid {

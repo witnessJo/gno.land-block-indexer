@@ -12,7 +12,6 @@ import (
 	"entgo.io/ent/schema/field"
 	"gno.land-block-indexer/ent/account"
 	"gno.land-block-indexer/ent/predicate"
-	"gno.land-block-indexer/ent/transaction"
 	"gno.land-block-indexer/ent/transfer"
 )
 
@@ -64,21 +63,6 @@ func (_u *AccountUpdate) AddAmount(v float64) *AccountUpdate {
 	return _u
 }
 
-// AddTransactionIDs adds the "transactions" edge to the Transaction entity by IDs.
-func (_u *AccountUpdate) AddTransactionIDs(ids ...int) *AccountUpdate {
-	_u.mutation.AddTransactionIDs(ids...)
-	return _u
-}
-
-// AddTransactions adds the "transactions" edges to the Transaction entity.
-func (_u *AccountUpdate) AddTransactions(v ...*Transaction) *AccountUpdate {
-	ids := make([]int, len(v))
-	for i := range v {
-		ids[i] = v[i].ID
-	}
-	return _u.AddTransactionIDs(ids...)
-}
-
 // AddTransferIDs adds the "transfers" edge to the Transfer entity by IDs.
 func (_u *AccountUpdate) AddTransferIDs(ids ...int) *AccountUpdate {
 	_u.mutation.AddTransferIDs(ids...)
@@ -97,27 +81,6 @@ func (_u *AccountUpdate) AddTransfers(v ...*Transfer) *AccountUpdate {
 // Mutation returns the AccountMutation object of the builder.
 func (_u *AccountUpdate) Mutation() *AccountMutation {
 	return _u.mutation
-}
-
-// ClearTransactions clears all "transactions" edges to the Transaction entity.
-func (_u *AccountUpdate) ClearTransactions() *AccountUpdate {
-	_u.mutation.ClearTransactions()
-	return _u
-}
-
-// RemoveTransactionIDs removes the "transactions" edge to Transaction entities by IDs.
-func (_u *AccountUpdate) RemoveTransactionIDs(ids ...int) *AccountUpdate {
-	_u.mutation.RemoveTransactionIDs(ids...)
-	return _u
-}
-
-// RemoveTransactions removes "transactions" edges to Transaction entities.
-func (_u *AccountUpdate) RemoveTransactions(v ...*Transaction) *AccountUpdate {
-	ids := make([]int, len(v))
-	for i := range v {
-		ids[i] = v[i].ID
-	}
-	return _u.RemoveTransactionIDs(ids...)
 }
 
 // ClearTransfers clears all "transfers" edges to the Transfer entity.
@@ -198,51 +161,6 @@ func (_u *AccountUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 	}
 	if value, ok := _u.mutation.AddedAmount(); ok {
 		_spec.AddField(account.FieldAmount, field.TypeFloat64, value)
-	}
-	if _u.mutation.TransactionsCleared() {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
-			Inverse: false,
-			Table:   account.TransactionsTable,
-			Columns: []string{account.TransactionsColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(transaction.FieldID, field.TypeInt),
-			},
-		}
-		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
-	}
-	if nodes := _u.mutation.RemovedTransactionsIDs(); len(nodes) > 0 && !_u.mutation.TransactionsCleared() {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
-			Inverse: false,
-			Table:   account.TransactionsTable,
-			Columns: []string{account.TransactionsColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(transaction.FieldID, field.TypeInt),
-			},
-		}
-		for _, k := range nodes {
-			edge.Target.Nodes = append(edge.Target.Nodes, k)
-		}
-		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
-	}
-	if nodes := _u.mutation.TransactionsIDs(); len(nodes) > 0 {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
-			Inverse: false,
-			Table:   account.TransactionsTable,
-			Columns: []string{account.TransactionsColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(transaction.FieldID, field.TypeInt),
-			},
-		}
-		for _, k := range nodes {
-			edge.Target.Nodes = append(edge.Target.Nodes, k)
-		}
-		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
 	if _u.mutation.TransfersCleared() {
 		edge := &sqlgraph.EdgeSpec{
@@ -344,21 +262,6 @@ func (_u *AccountUpdateOne) AddAmount(v float64) *AccountUpdateOne {
 	return _u
 }
 
-// AddTransactionIDs adds the "transactions" edge to the Transaction entity by IDs.
-func (_u *AccountUpdateOne) AddTransactionIDs(ids ...int) *AccountUpdateOne {
-	_u.mutation.AddTransactionIDs(ids...)
-	return _u
-}
-
-// AddTransactions adds the "transactions" edges to the Transaction entity.
-func (_u *AccountUpdateOne) AddTransactions(v ...*Transaction) *AccountUpdateOne {
-	ids := make([]int, len(v))
-	for i := range v {
-		ids[i] = v[i].ID
-	}
-	return _u.AddTransactionIDs(ids...)
-}
-
 // AddTransferIDs adds the "transfers" edge to the Transfer entity by IDs.
 func (_u *AccountUpdateOne) AddTransferIDs(ids ...int) *AccountUpdateOne {
 	_u.mutation.AddTransferIDs(ids...)
@@ -377,27 +280,6 @@ func (_u *AccountUpdateOne) AddTransfers(v ...*Transfer) *AccountUpdateOne {
 // Mutation returns the AccountMutation object of the builder.
 func (_u *AccountUpdateOne) Mutation() *AccountMutation {
 	return _u.mutation
-}
-
-// ClearTransactions clears all "transactions" edges to the Transaction entity.
-func (_u *AccountUpdateOne) ClearTransactions() *AccountUpdateOne {
-	_u.mutation.ClearTransactions()
-	return _u
-}
-
-// RemoveTransactionIDs removes the "transactions" edge to Transaction entities by IDs.
-func (_u *AccountUpdateOne) RemoveTransactionIDs(ids ...int) *AccountUpdateOne {
-	_u.mutation.RemoveTransactionIDs(ids...)
-	return _u
-}
-
-// RemoveTransactions removes "transactions" edges to Transaction entities.
-func (_u *AccountUpdateOne) RemoveTransactions(v ...*Transaction) *AccountUpdateOne {
-	ids := make([]int, len(v))
-	for i := range v {
-		ids[i] = v[i].ID
-	}
-	return _u.RemoveTransactionIDs(ids...)
 }
 
 // ClearTransfers clears all "transfers" edges to the Transfer entity.
@@ -508,51 +390,6 @@ func (_u *AccountUpdateOne) sqlSave(ctx context.Context) (_node *Account, err er
 	}
 	if value, ok := _u.mutation.AddedAmount(); ok {
 		_spec.AddField(account.FieldAmount, field.TypeFloat64, value)
-	}
-	if _u.mutation.TransactionsCleared() {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
-			Inverse: false,
-			Table:   account.TransactionsTable,
-			Columns: []string{account.TransactionsColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(transaction.FieldID, field.TypeInt),
-			},
-		}
-		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
-	}
-	if nodes := _u.mutation.RemovedTransactionsIDs(); len(nodes) > 0 && !_u.mutation.TransactionsCleared() {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
-			Inverse: false,
-			Table:   account.TransactionsTable,
-			Columns: []string{account.TransactionsColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(transaction.FieldID, field.TypeInt),
-			},
-		}
-		for _, k := range nodes {
-			edge.Target.Nodes = append(edge.Target.Nodes, k)
-		}
-		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
-	}
-	if nodes := _u.mutation.TransactionsIDs(); len(nodes) > 0 {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
-			Inverse: false,
-			Table:   account.TransactionsTable,
-			Columns: []string{account.TransactionsColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(transaction.FieldID, field.TypeInt),
-			},
-		}
-		for _, k := range nodes {
-			edge.Target.Nodes = append(edge.Target.Nodes, k)
-		}
-		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
 	if _u.mutation.TransfersCleared() {
 		edge := &sqlgraph.EdgeSpec{

@@ -116,12 +116,12 @@ func (s *service) RestoreMissingBlockAndTransactions(ctx context.Context) error 
 		close(chBlock)
 	case block, ok = <-chBlock:
 		if !ok {
-			s.logger.Infof("channel closed, stopping subscription")
+			s.logger.Infof("🌱 channel closed, no blocks received")
 			return nil
 		}
-		s.logger.Infof("Received block: Height=%d, Hash=%s, Time=%s",
+		s.logger.Infof("🌱 Received block: Height=%d, Hash=%s, Time=%s",
 			block.Height, block.Hash, block.Time)
-		s.logger.Infof("Total messages received: %d", 1)
+		s.logger.Infof("🌱 Total messages received: %d", 1)
 		break // Exit after receiving the first block
 	}
 
@@ -147,7 +147,7 @@ func (s *service) RestoreMissingBlockAndTransactions(ctx context.Context) error 
 			return s.logger.Errorf("failed to save restoring history for block %d: %v", i, err)
 		}
 
-		s.logger.Infof("Polled %d blocks starting from height %d", len(blocks), i)
+		s.logger.Infof("🌱 Polled %d blocks starting from height %d", len(blocks), i)
 
 		transactions, err := s.PollTransactions(i, 100)
 		if err != nil {
@@ -175,15 +175,15 @@ func (s *service) RestoreMissingBlockAndTransactions(ctx context.Context) error 
 		for _, bwt := range blockWithTxs {
 			msgBytes, err := json.Marshal(bwt)
 			if err != nil {
-				s.logger.Infof("failed to marshal block with transactions: %v", err)
+				s.logger.Errorf("🌱 failed to marshal block with transactions: %v", err)
 				continue
 			}
 
 			if err := s.localStack.Publish(topicBlockWithTxs, msgBytes); err != nil {
-				s.logger.Infof("failed to publish block with transactions: %v", err)
+				s.logger.Errorf("🌱 failed to publish block with transactions: %v", err)
 				continue
 			}
-			s.logger.Infof("Published block with transactions for height %d", bwt.Block.Height)
+			s.logger.Infof("🌱 Published block with transactions for height %d", bwt.Block.Height)
 		}
 	}
 

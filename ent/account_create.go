@@ -12,7 +12,6 @@ import (
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
 	"gno.land-block-indexer/ent/account"
-	"gno.land-block-indexer/ent/transaction"
 	"gno.land-block-indexer/ent/transfer"
 )
 
@@ -40,21 +39,6 @@ func (_c *AccountCreate) SetAmount(v float64) *AccountCreate {
 func (_c *AccountCreate) SetID(v string) *AccountCreate {
 	_c.mutation.SetID(v)
 	return _c
-}
-
-// AddTransactionIDs adds the "transactions" edge to the Transaction entity by IDs.
-func (_c *AccountCreate) AddTransactionIDs(ids ...int) *AccountCreate {
-	_c.mutation.AddTransactionIDs(ids...)
-	return _c
-}
-
-// AddTransactions adds the "transactions" edges to the Transaction entity.
-func (_c *AccountCreate) AddTransactions(v ...*Transaction) *AccountCreate {
-	ids := make([]int, len(v))
-	for i := range v {
-		ids[i] = v[i].ID
-	}
-	return _c.AddTransactionIDs(ids...)
 }
 
 // AddTransferIDs adds the "transfers" edge to the Transfer entity by IDs.
@@ -165,22 +149,6 @@ func (_c *AccountCreate) createSpec() (*Account, *sqlgraph.CreateSpec) {
 	if value, ok := _c.mutation.Amount(); ok {
 		_spec.SetField(account.FieldAmount, field.TypeFloat64, value)
 		_node.Amount = value
-	}
-	if nodes := _c.mutation.TransactionsIDs(); len(nodes) > 0 {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
-			Inverse: false,
-			Table:   account.TransactionsTable,
-			Columns: []string{account.TransactionsColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(transaction.FieldID, field.TypeInt),
-			},
-		}
-		for _, k := range nodes {
-			edge.Target.Nodes = append(edge.Target.Nodes, k)
-		}
-		_spec.Edges = append(_spec.Edges, edge)
 	}
 	if nodes := _c.mutation.TransfersIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{

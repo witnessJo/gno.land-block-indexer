@@ -345,22 +345,6 @@ func (c *AccountClient) GetX(ctx context.Context, id string) *Account {
 	return obj
 }
 
-// QueryTransactions queries the transactions edge of a Account.
-func (c *AccountClient) QueryTransactions(_m *Account) *TransactionQuery {
-	query := (&TransactionClient{config: c.config}).Query()
-	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
-		id := _m.ID
-		step := sqlgraph.NewStep(
-			sqlgraph.From(account.Table, account.FieldID, id),
-			sqlgraph.To(transaction.Table, transaction.FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, false, account.TransactionsTable, account.TransactionsColumn),
-		)
-		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
-		return fromV, nil
-	}
-	return query
-}
-
 // QueryTransfers queries the transfers edge of a Account.
 func (c *AccountClient) QueryTransfers(_m *Account) *TransferQuery {
 	query := (&TransferClient{config: c.config}).Query()

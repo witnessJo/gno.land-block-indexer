@@ -141,7 +141,7 @@ func (m *msgBrokerLocalstack) Publish(topic string, message []byte) error {
 	}
 
 	// 메시지 발행
-	output, err := m.snsClient.Publish(m.ctx, &sns.PublishInput{
+	_, err := m.snsClient.Publish(m.ctx, &sns.PublishInput{
 		TopicArn: aws.String(topicArn),
 		Message:  aws.String(string(message)),
 	})
@@ -149,7 +149,7 @@ func (m *msgBrokerLocalstack) Publish(topic string, message []byte) error {
 		return fmt.Errorf("failed to publish message to topic %s: %w", topic, err)
 	}
 
-	log.Infof("Published message to topic %s, MessageId: %s", topic, *output.MessageId)
+	// log.Infof("Published message to topic %s, MessageId: %s", topic, *output.MessageId)
 	return nil
 }
 

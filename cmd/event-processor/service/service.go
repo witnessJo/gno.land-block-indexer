@@ -20,6 +20,9 @@ const (
 type Service interface {
 	// usecase (from controller)
 	SubscribeAndHandle(ctx context.Context) error
+
+	//
+	ProcessBlockWithTransactions(ctx context.Context, blockWithTxs msgbroker.BlockWithTransactions) error
 }
 
 type service struct {
@@ -110,7 +113,7 @@ func (s *service) messageWorker(ctx context.Context, workCh <-chan msgbroker.Blo
 			}
 
 			// Process message
-			if err := s.processBlockWithTransactions(ctx, blockWithTxs); err != nil {
+			if err := s.ProcessBlockWithTransactions(ctx, blockWithTxs); err != nil {
 				s.logger.Errorf("Worker %d failed to process block %d: %v",
 					workerID, blockWithTxs.Block.Height, err)
 			}
@@ -119,7 +122,7 @@ func (s *service) messageWorker(ctx context.Context, workCh <-chan msgbroker.Blo
 }
 
 // processBlockWithTransactions handles the actual message processing
-func (s *service) processBlockWithTransactions(ctx context.Context, blockWithTxs msgbroker.BlockWithTransactions) error {
+func (s *service) ProcessBlockWithTransactions(ctx context.Context, blockWithTxs msgbroker.BlockWithTransactions) error {
 	err := s.repo.AddBlock(ctx, blockWithTxs.Block)
 	if err != nil {
 		return s.logger.Errorf("failed to add block %d: %w", blockWithTxs.Block.Height, err)
@@ -165,20 +168,17 @@ func (s *service) parseAndProcessTransactions(ctx context.Context, transactions 
 
 				switch strings.ToLower(event.Func) {
 				case "mint":
-					if err := s.handleMintEvent(ctx, &tx, event.PkgPath, fromAddress, toAddress, numValue); err != nil {
+					if err := s.handleMintEvent(ctx, &tx, event.PkgPath, toAddress, numValue); err != nil {
 						return s.logger.Errorf("Failed to handle mint event for transaction %s: %v", tx.Hash, err)
 					}
-					break
 				case "burn":
-					if err := s.handleBurnEvent(ctx, &tx, event.PkgPath, fromAddress, toAddress, int64(numValue)); err != nil {
+					if err := s.handleBurnEvent(ctx, &tx, event.PkgPath, fromAddress, int64(numValue)); err != nil {
 						return s.logger.Errorf("Failed to handle burn event for transaction %s: %v", tx.Hash, err)
 					}
-					break
 				case "transfer":
 					if err := s.handleTransferEvent(ctx, &tx, event.PkgPath, fromAddress, toAddress, int64(numValue)); err != nil {
 						return s.logger.Errorf("Failed to handle transfer event for transaction %s: %v", tx.Hash, err)
 					}
-					break
 				default:
 					s.logger.Warnf("Unknown event type %s in transaction %s", event.Type, tx.Hash)
 				}
@@ -189,9 +189,14 @@ func (s *service) parseAndProcessTransactions(ctx context.Context, transactions 
 	return nil
 }
 
-func (s *service) handleMintEvent(ctx context.Context, tx *model.Transaction, pkg string, fromAddress string, toAddress string, value int64) error {
+func (s *service) handleMintEvent(ctx context.Context, tx *model.Transaction, pkg string, toAddress string, value int64) error {
 	// For mint events, tokens are created and added to the toAddress
 	// Check if account exists, create if not
+	if toAddress == "" {
+		s.logger.Warnf("Transfer event for transaction %s has empty 'to' address, skipping", tx.Hash)
+		return nil
+	}
+
 	toAccount, err := s.repo.GetAccount(ctx, toAddress, pkg)
 	if err != nil {
 		return err
@@ -217,9 +222,14 @@ func (s *service) handleMintEvent(ctx context.Context, tx *model.Transaction, pk
 	return nil
 }
 
-func (s *service) handleBurnEvent(ctx context.Context, tx *model.Transaction, pkg string, fromAddress string, toAddress string, value int64) error {
+func (s *service) handleBurnEvent(ctx context.Context, tx *model.Transaction, pkg string, fromAddress string, value int64) error {
 	// For burn events, tokens are destroyed from the fromAddress
 	// Check if account exists
+	if fromAddress == "" {
+		s.logger.Warnf("Transfer event for transaction %s has empty 'from' address, skipping", tx.Hash)
+		return nil
+	}
+
 	fromAccount, err := s.repo.GetAccount(ctx, fromAddress, pkg)
 	if err != nil {
 		return err

@@ -62,7 +62,6 @@ var (
 		{Name: "messages", Type: field.TypeJSON, Nullable: true},
 		{Name: "response", Type: field.TypeJSON, Nullable: true},
 		{Name: "created_at", Type: field.TypeTime},
-		{Name: "account_transactions", Type: field.TypeString, Nullable: true},
 		{Name: "block_transactions", Type: field.TypeInt, Nullable: true},
 	}
 	// TransactionsTable holds the schema information for the "transactions" table.
@@ -72,14 +71,8 @@ var (
 		PrimaryKey: []*schema.Column{TransactionsColumns[0]},
 		ForeignKeys: []*schema.ForeignKey{
 			{
-				Symbol:     "transactions_accounts_transactions",
-				Columns:    []*schema.Column{TransactionsColumns[12]},
-				RefColumns: []*schema.Column{AccountsColumns[0]},
-				OnDelete:   schema.SetNull,
-			},
-			{
 				Symbol:     "transactions_blocks_transactions",
-				Columns:    []*schema.Column{TransactionsColumns[13]},
+				Columns:    []*schema.Column{TransactionsColumns[12]},
 				RefColumns: []*schema.Column{BlocksColumns[0]},
 				OnDelete:   schema.SetNull,
 			},
@@ -121,7 +114,6 @@ var (
 )
 
 func init() {
-	TransactionsTable.ForeignKeys[0].RefTable = AccountsTable
-	TransactionsTable.ForeignKeys[1].RefTable = BlocksTable
+	TransactionsTable.ForeignKeys[0].RefTable = BlocksTable
 	TransfersTable.ForeignKeys[0].RefTable = AccountsTable
 }
