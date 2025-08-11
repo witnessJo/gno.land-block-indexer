@@ -39,55 +39,60 @@ func NewRepositoryBsEnt(logger log.Logger, config *RepositoryBsEntConfig) Reposi
 }
 
 // GetNotSequentialBlockNum implements BsRepository.
-func (r *repositoryBsEnt) GetNotSequentialBlockNum(ctx context.Context) (int, error) {
+func (r *repositoryBsEnt) GetNotSequentialBlockNum(ctx context.Context, limit int) (int, error) {
 	// Check start with 0 and find the block stopping at the first non-sequential block
 	// 1, 2 ,3, 6 => 3 is not sequential
 
 	const batchSize = 1000
-	currentHeight := 1
-
-	for {
+	found := false
+	startBlockHeight := 1
+	for ; startBlockHeight < limit; startBlockHeight += batchSize {
 		// Check if this range has the expected number of blocks
-		endHeight := currentHeight + batchSize - 1
+		endHeight := startBlockHeight + batchSize - 1
 		count, err := r.client.Block.
 			Query().
-			Where(block.HeightGTE(currentHeight), block.HeightLTE(endHeight)).
+			Where(block.HeightGTE(startBlockHeight), block.HeightLTE(endHeight)).
 			Count(ctx)
 		if err != nil {
-			r.logger.Errorf("failed to count blocks from %d to %d: %v", currentHeight, endHeight, err)
+			r.logger.Errorf("failed to count blocks from %d to %d: %v", startBlockHeight, endHeight, err)
 			return 0, fmt.Errorf("failed to count blocks: %w", err)
 		}
-
-		// If count matches expected, all blocks exist - move to next batch
-		if count == batchSize {
-			currentHeight += batchSize
-			continue
+		if count < batchSize {
+			r.logger.Infof("found non-sequential block at height %d, expected %d blocks but got %d", startBlockHeight, batchSize, count)
+			found = true
+			break
 		}
-
-		// Count doesn't match - there's a gap in this range
-		// Get blocks from currentHeight to endHeight and find the first missing one
-		blocks, err := r.client.Block.
-			Query().
-			Where(block.HeightGTE(currentHeight), block.HeightLTE(endHeight)).
-			Order(ent.Asc("height")).
-			Select("height").
-			All(ctx)
-		if err != nil {
-			r.logger.Errorf("failed to query blocks from %d to %d: %v", currentHeight, endHeight, err)
-			return 0, fmt.Errorf("failed to query blocks: %w", err)
-		}
-
-		// Find the first gap in this specific range
-		expectedHeight := currentHeight
-		for _, block := range blocks {
-			if block.Height != expectedHeight {
-				return expectedHeight, nil
-			}
-			expectedHeight++
-		}
-
-		// If we processed all blocks in range but still missing some,
-		// the gap is right after the last processed block
-		return expectedHeight, nil
+		r.logger.Debugf("found %d blocks from %d to %d", count, startBlockHeight, endHeight)
+		startBlockHeight += batchSize
 	}
+
+	if !found {
+		r.logger.Infof("all blocks are sequential up to height %d", startBlockHeight-1)
+		return limit, nil
+	}
+
+	// We need find exactly the first non-sequential block
+	candidateBlocks, err := r.client.Block.Query().
+		Where(block.HeightGTE(startBlockHeight)).
+		Order(ent.Asc(block.FieldHeight)).
+		Limit(batchSize).
+		All(ctx)
+	if err != nil {
+		r.logger.Errorf("failed to query blocks starting from %d: %v", startBlockHeight, err)
+		return 0, fmt.Errorf("failed to query blocks: %w", err)
+	}
+	if len(candidateBlocks) == 0 {
+		r.logger.Infof("no blocks found starting from height %d", startBlockHeight)
+		return limit, nil
+	}
+
+	for _, b := range candidateBlocks {
+		if b.Height != startBlockHeight {
+			r.logger.Infof("found non-sequential block at height %d, expected %d", b.Height, startBlockHeight)
+			return startBlockHeight - 1, nil
+		}
+		startBlockHeight++
+	}
+
+	return limit, nil
 }

@@ -126,7 +126,7 @@ func (s *service) RestoreMissingBlockAndTransactions(ctx context.Context) error 
 	}
 
 	// Get blocks from repository
-	startBlockNum, err := s.repoBs.GetNotSequentialBlockNum(ctx)
+	startBlockNum, err := s.repoBs.GetNotSequentialBlockNum(ctx, block.Height)
 	if err != nil {
 		return s.logger.Errorf("failed to get not sequential block number: %v", err)
 	}
@@ -439,7 +439,7 @@ func (s *service) PollTransactions(blockOffset int, limit int) ([]model.Transact
                   }
                 }
               }
-		}`, blockOffset, blockOffset+limit))
+		}`, blockOffset, blockOffset+limit+1))
 
 	// 응답 구조체 - interface{} 사용으로 유연하게 처리
 	// {

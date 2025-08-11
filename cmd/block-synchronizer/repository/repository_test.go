@@ -24,7 +24,7 @@ func TestGetNotSequentialBlockNum(t *testing.T) {
 	if repo == nil {
 		t.Fatal("Failed to create repository")
 	}
-	blockNum, err := repo.GetNotSequentialBlockNum(ctx)
+	blockNum, err := repo.GetNotSequentialBlockNum(ctx, 1000000)
 	if err != nil {
 		t.Fatalf("Failed to get not sequential block number: %v", err)
 	}
