@@ -33,22 +33,25 @@ const (
 // BlockMutation represents an operation that mutates the Block nodes in the graph.
 type BlockMutation struct {
 	config
-	op            Op
-	typ           string
-	id            *int
-	hash          *string
-	height        *int
-	addheight     *int
-	time          *time.Time
-	total_txs     *int
-	addtotal_txs  *int
-	num_txs       *int
-	addnum_txs    *int
-	created_at    *time.Time
-	clearedFields map[string]struct{}
-	done          bool
-	oldValue      func(context.Context) (*Block, error)
-	predicates    []predicate.Block
+	op                  Op
+	typ                 string
+	id                  *int
+	hash                *string
+	height              *int
+	addheight           *int
+	time                *time.Time
+	total_txs           *int
+	addtotal_txs        *int
+	num_txs             *int
+	addnum_txs          *int
+	created_at          *time.Time
+	clearedFields       map[string]struct{}
+	transactions        map[int]struct{}
+	removedtransactions map[int]struct{}
+	clearedtransactions bool
+	done                bool
+	oldValue            func(context.Context) (*Block, error)
+	predicates          []predicate.Block
 }
 
 var _ ent.Mutation = (*BlockMutation)(nil)
@@ -425,6 +428,60 @@ func (m *BlockMutation) ResetCreatedAt() {
 	m.created_at = nil
 }
 
+// AddTransactionIDs adds the "transactions" edge to the Transaction entity by ids.
+func (m *BlockMutation) AddTransactionIDs(ids ...int) {
+	if m.transactions == nil {
+		m.transactions = make(map[int]struct{})
+	}
+	for i := range ids {
+		m.transactions[ids[i]] = struct{}{}
+	}
+}
+
+// ClearTransactions clears the "transactions" edge to the Transaction entity.
+func (m *BlockMutation) ClearTransactions() {
+	m.clearedtransactions = true
+}
+
+// TransactionsCleared reports if the "transactions" edge to the Transaction entity was cleared.
+func (m *BlockMutation) TransactionsCleared() bool {
+	return m.clearedtransactions
+}
+
+// RemoveTransactionIDs removes the "transactions" edge to the Transaction entity by IDs.
+func (m *BlockMutation) RemoveTransactionIDs(ids ...int) {
+	if m.removedtransactions == nil {
+		m.removedtransactions = make(map[int]struct{})
+	}
+	for i := range ids {
+		delete(m.transactions, ids[i])
+		m.removedtransactions[ids[i]] = struct{}{}
+	}
+}
+
+// RemovedTransactions returns the removed IDs of the "transactions" edge to the Transaction entity.
+func (m *BlockMutation) RemovedTransactionsIDs() (ids []int) {
+	for id := range m.removedtransactions {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// TransactionsIDs returns the "transactions" edge IDs in the mutation.
+func (m *BlockMutation) TransactionsIDs() (ids []int) {
+	for id := range m.transactions {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// ResetTransactions resets all changes to the "transactions" edge.
+func (m *BlockMutation) ResetTransactions() {
+	m.transactions = nil
+	m.clearedtransactions = false
+	m.removedtransactions = nil
+}
+
 // Where appends a list predicates to the BlockMutation builder.
 func (m *BlockMutation) Where(ps ...predicate.Block) {
 	m.predicates = append(m.predicates, ps...)
@@ -682,49 +739,85 @@ func (m *BlockMutation) ResetField(name string) error {
 
 // AddedEdges returns all edge names that were set/added in this mutation.
 func (m *BlockMutation) AddedEdges() []string {
-	edges := make([]string, 0, 0)
+	edges := make([]string, 0, 1)
+	if m.transactions != nil {
+		edges = append(edges, block.EdgeTransactions)
+	}
 	return edges
 }
 
 // AddedIDs returns all IDs (to other nodes) that were added for the given edge
 // name in this mutation.
 func (m *BlockMutation) AddedIDs(name string) []ent.Value {
+	switch name {
+	case block.EdgeTransactions:
+		ids := make([]ent.Value, 0, len(m.transactions))
+		for id := range m.transactions {
+			ids = append(ids, id)
+		}
+		return ids
+	}
 	return nil
 }
 
 // RemovedEdges returns all edge names that were removed in this mutation.
 func (m *BlockMutation) RemovedEdges() []string {
-	edges := make([]string, 0, 0)
+	edges := make([]string, 0, 1)
+	if m.removedtransactions != nil {
+		edges = append(edges, block.EdgeTransactions)
+	}
 	return edges
 }
 
 // RemovedIDs returns all IDs (to other nodes) that were removed for the edge with
 // the given name in this mutation.
 func (m *BlockMutation) RemovedIDs(name string) []ent.Value {
+	switch name {
+	case block.EdgeTransactions:
+		ids := make([]ent.Value, 0, len(m.removedtransactions))
+		for id := range m.removedtransactions {
+			ids = append(ids, id)
+		}
+		return ids
+	}
 	return nil
 }
 
 // ClearedEdges returns all edge names that were cleared in this mutation.
 func (m *BlockMutation) ClearedEdges() []string {
-	edges := make([]string, 0, 0)
+	edges := make([]string, 0, 1)
+	if m.clearedtransactions {
+		edges = append(edges, block.EdgeTransactions)
+	}
 	return edges
 }
 
 // EdgeCleared returns a boolean which indicates if the edge with the given name
 // was cleared in this mutation.
 func (m *BlockMutation) EdgeCleared(name string) bool {
+	switch name {
+	case block.EdgeTransactions:
+		return m.clearedtransactions
+	}
 	return false
 }
 
 // ClearEdge clears the value of the edge with the given name. It returns an error
 // if that edge is not defined in the schema.
 func (m *BlockMutation) ClearEdge(name string) error {
+	switch name {
+	}
 	return fmt.Errorf("unknown Block unique edge %s", name)
 }
 
 // ResetEdge resets all changes to the edge with the given name in this mutation.
 // It returns an error if the edge is not defined in the schema.
 func (m *BlockMutation) ResetEdge(name string) error {
+	switch name {
+	case block.EdgeTransactions:
+		m.ResetTransactions()
+		return nil
+	}
 	return fmt.Errorf("unknown Block edge %s", name)
 }
 
@@ -751,6 +844,8 @@ type TransactionMutation struct {
 	response        *schema.Response
 	created_at      *time.Time
 	clearedFields   map[string]struct{}
+	block           *int
+	clearedblock    bool
 	done            bool
 	oldValue        func(context.Context) (*Transaction, error)
 	predicates      []predicate.Transaction
@@ -1398,6 +1493,45 @@ func (m *TransactionMutation) ResetCreatedAt() {
 	m.created_at = nil
 }
 
+// SetBlockID sets the "block" edge to the Block entity by id.
+func (m *TransactionMutation) SetBlockID(id int) {
+	m.block = &id
+}
+
+// ClearBlock clears the "block" edge to the Block entity.
+func (m *TransactionMutation) ClearBlock() {
+	m.clearedblock = true
+}
+
+// BlockCleared reports if the "block" edge to the Block entity was cleared.
+func (m *TransactionMutation) BlockCleared() bool {
+	return m.clearedblock
+}
+
+// BlockID returns the "block" edge ID in the mutation.
+func (m *TransactionMutation) BlockID() (id int, exists bool) {
+	if m.block != nil {
+		return *m.block, true
+	}
+	return
+}
+
+// BlockIDs returns the "block" edge IDs in the mutation.
+// Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
+// BlockID instead. It exists only for internal usage by the builders.
+func (m *TransactionMutation) BlockIDs() (ids []int) {
+	if id := m.block; id != nil {
+		ids = append(ids, *id)
+	}
+	return
+}
+
+// ResetBlock resets all changes to the "block" edge.
+func (m *TransactionMutation) ResetBlock() {
+	m.block = nil
+	m.clearedblock = false
+}
+
 // Where appends a list predicates to the TransactionMutation builder.
 func (m *TransactionMutation) Where(ps ...predicate.Transaction) {
 	m.predicates = append(m.predicates, ps...)
@@ -1779,19 +1913,28 @@ func (m *TransactionMutation) ResetField(name string) error {
 
 // AddedEdges returns all edge names that were set/added in this mutation.
 func (m *TransactionMutation) AddedEdges() []string {
-	edges := make([]string, 0, 0)
+	edges := make([]string, 0, 1)
+	if m.block != nil {
+		edges = append(edges, transaction.EdgeBlock)
+	}
 	return edges
 }
 
 // AddedIDs returns all IDs (to other nodes) that were added for the given edge
 // name in this mutation.
 func (m *TransactionMutation) AddedIDs(name string) []ent.Value {
+	switch name {
+	case transaction.EdgeBlock:
+		if id := m.block; id != nil {
+			return []ent.Value{*id}
+		}
+	}
 	return nil
 }
 
 // RemovedEdges returns all edge names that were removed in this mutation.
 func (m *TransactionMutation) RemovedEdges() []string {
-	edges := make([]string, 0, 0)
+	edges := make([]string, 0, 1)
 	return edges
 }
 
@@ -1803,24 +1946,41 @@ func (m *TransactionMutation) RemovedIDs(name string) []ent.Value {
 
 // ClearedEdges returns all edge names that were cleared in this mutation.
 func (m *TransactionMutation) ClearedEdges() []string {
-	edges := make([]string, 0, 0)
+	edges := make([]string, 0, 1)
+	if m.clearedblock {
+		edges = append(edges, transaction.EdgeBlock)
+	}
 	return edges
 }
 
 // EdgeCleared returns a boolean which indicates if the edge with the given name
 // was cleared in this mutation.
 func (m *TransactionMutation) EdgeCleared(name string) bool {
+	switch name {
+	case transaction.EdgeBlock:
+		return m.clearedblock
+	}
 	return false
 }
 
 // ClearEdge clears the value of the edge with the given name. It returns an error
 // if that edge is not defined in the schema.
 func (m *TransactionMutation) ClearEdge(name string) error {
+	switch name {
+	case transaction.EdgeBlock:
+		m.ClearBlock()
+		return nil
+	}
 	return fmt.Errorf("unknown Transaction unique edge %s", name)
 }
 
 // ResetEdge resets all changes to the edge with the given name in this mutation.
 // It returns an error if the edge is not defined in the schema.
 func (m *TransactionMutation) ResetEdge(name string) error {
+	switch name {
+	case transaction.EdgeBlock:
+		m.ResetBlock()
+		return nil
+	}
 	return fmt.Errorf("unknown Transaction edge %s", name)
 }

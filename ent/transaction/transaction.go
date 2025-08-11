@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"entgo.io/ent/dialect/sql"
+	"entgo.io/ent/dialect/sql/sqlgraph"
 )
 
 const (
@@ -35,8 +36,17 @@ const (
 	FieldResponse = "response"
 	// FieldCreatedAt holds the string denoting the created_at field in the database.
 	FieldCreatedAt = "created_at"
+	// EdgeBlock holds the string denoting the block edge name in mutations.
+	EdgeBlock = "block"
 	// Table holds the table name of the transaction in the database.
 	Table = "transactions"
+	// BlockTable is the table that holds the block relation/edge.
+	BlockTable = "transactions"
+	// BlockInverseTable is the table name for the Block entity.
+	// It exists in this package in order to avoid circular dependency with the "block" package.
+	BlockInverseTable = "blocks"
+	// BlockColumn is the table column denoting the block relation/edge.
+	BlockColumn = "block_transactions"
 )
 
 // Columns holds all SQL columns for transaction fields.
@@ -55,10 +65,21 @@ var Columns = []string{
 	FieldCreatedAt,
 }
 
+// ForeignKeys holds the SQL foreign-keys that are owned by the "transactions"
+// table and are not defined as standalone fields in the schema.
+var ForeignKeys = []string{
+	"block_transactions",
+}
+
 // ValidColumn reports if the column name is valid (part of the table columns).
 func ValidColumn(column string) bool {
 	for i := range Columns {
 		if column == Columns[i] {
+			return true
+		}
+	}
+	for i := range ForeignKeys {
+		if column == ForeignKeys[i] {
 			return true
 		}
 	}
@@ -120,4 +141,18 @@ func ByMemo(opts ...sql.OrderTermOption) OrderOption {
 // ByCreatedAt orders the results by the created_at field.
 func ByCreatedAt(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldCreatedAt, opts...).ToFunc()
+}
+
+// ByBlockField orders the results by block field.
+func ByBlockField(field string, opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newBlockStep(), sql.OrderByField(field, opts...))
+	}
+}
+func newBlockStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(BlockInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.M2O, true, BlockTable, BlockColumn),
+	)
 }

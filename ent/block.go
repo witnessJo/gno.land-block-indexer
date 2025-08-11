@@ -28,8 +28,29 @@ type Block struct {
 	// Number of transactions in the block
 	NumTxs int `json:"num_txs,omitempty"`
 	// Creation time of the block
-	CreatedAt    time.Time `json:"created_at,omitempty"`
+	CreatedAt time.Time `json:"created_at,omitempty"`
+	// Edges holds the relations/edges for other nodes in the graph.
+	// The values are being populated by the BlockQuery when eager-loading is set.
+	Edges        BlockEdges `json:"edges"`
 	selectValues sql.SelectValues
+}
+
+// BlockEdges holds the relations/edges for other nodes in the graph.
+type BlockEdges struct {
+	// Transactions holds the value of the transactions edge.
+	Transactions []*Transaction `json:"transactions,omitempty"`
+	// loadedTypes holds the information for reporting if a
+	// type was loaded (or requested) in eager-loading or not.
+	loadedTypes [1]bool
+}
+
+// TransactionsOrErr returns the Transactions value or an error if the edge
+// was not loaded in eager-loading.
+func (e BlockEdges) TransactionsOrErr() ([]*Transaction, error) {
+	if e.loadedTypes[0] {
+		return e.Transactions, nil
+	}
+	return nil, &NotLoadedError{edge: "transactions"}
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
@@ -111,6 +132,11 @@ func (_m *Block) assignValues(columns []string, values []any) error {
 // This includes values selected through modifiers, order, etc.
 func (_m *Block) Value(name string) (ent.Value, error) {
 	return _m.selectValues.Get(name)
+}
+
+// QueryTransactions queries the "transactions" edge of the Block entity.
+func (_m *Block) QueryTransactions() *TransactionQuery {
+	return NewBlockClient(_m.config).QueryTransactions(_m)
 }
 
 // Update returns a builder for updating this Block.

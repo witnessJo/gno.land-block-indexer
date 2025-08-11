@@ -10,6 +10,7 @@ import (
 
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
+	"gno.land-block-indexer/ent/block"
 	"gno.land-block-indexer/ent/schema"
 	"gno.land-block-indexer/ent/transaction"
 )
@@ -125,6 +126,25 @@ func (_c *TransactionCreate) SetNillableCreatedAt(v *time.Time) *TransactionCrea
 		_c.SetCreatedAt(*v)
 	}
 	return _c
+}
+
+// SetBlockID sets the "block" edge to the Block entity by ID.
+func (_c *TransactionCreate) SetBlockID(id int) *TransactionCreate {
+	_c.mutation.SetBlockID(id)
+	return _c
+}
+
+// SetNillableBlockID sets the "block" edge to the Block entity by ID if the given value is not nil.
+func (_c *TransactionCreate) SetNillableBlockID(id *int) *TransactionCreate {
+	if id != nil {
+		_c = _c.SetBlockID(*id)
+	}
+	return _c
+}
+
+// SetBlock sets the "block" edge to the Block entity.
+func (_c *TransactionCreate) SetBlock(v *Block) *TransactionCreate {
+	return _c.SetBlockID(v.ID)
 }
 
 // Mutation returns the TransactionMutation object of the builder.
@@ -269,6 +289,23 @@ func (_c *TransactionCreate) createSpec() (*Transaction, *sqlgraph.CreateSpec) {
 	if value, ok := _c.mutation.CreatedAt(); ok {
 		_spec.SetField(transaction.FieldCreatedAt, field.TypeTime, value)
 		_node.CreatedAt = value
+	}
+	if nodes := _c.mutation.BlockIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   transaction.BlockTable,
+			Columns: []string{transaction.BlockColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(block.FieldID, field.TypeInt),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_node.block_transactions = &nodes[0]
+		_spec.Edges = append(_spec.Edges, edge)
 	}
 	return _node, _spec
 }

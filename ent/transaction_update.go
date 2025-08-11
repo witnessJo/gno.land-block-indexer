@@ -11,6 +11,7 @@ import (
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/dialect/sql/sqljson"
 	"entgo.io/ent/schema/field"
+	"gno.land-block-indexer/ent/block"
 	"gno.land-block-indexer/ent/predicate"
 	"gno.land-block-indexer/ent/schema"
 	"gno.land-block-indexer/ent/transaction"
@@ -219,9 +220,34 @@ func (_u *TransactionUpdate) ClearResponse() *TransactionUpdate {
 	return _u
 }
 
+// SetBlockID sets the "block" edge to the Block entity by ID.
+func (_u *TransactionUpdate) SetBlockID(id int) *TransactionUpdate {
+	_u.mutation.SetBlockID(id)
+	return _u
+}
+
+// SetNillableBlockID sets the "block" edge to the Block entity by ID if the given value is not nil.
+func (_u *TransactionUpdate) SetNillableBlockID(id *int) *TransactionUpdate {
+	if id != nil {
+		_u = _u.SetBlockID(*id)
+	}
+	return _u
+}
+
+// SetBlock sets the "block" edge to the Block entity.
+func (_u *TransactionUpdate) SetBlock(v *Block) *TransactionUpdate {
+	return _u.SetBlockID(v.ID)
+}
+
 // Mutation returns the TransactionMutation object of the builder.
 func (_u *TransactionUpdate) Mutation() *TransactionMutation {
 	return _u.mutation
+}
+
+// ClearBlock clears the "block" edge to the Block entity.
+func (_u *TransactionUpdate) ClearBlock() *TransactionUpdate {
+	_u.mutation.ClearBlock()
+	return _u
 }
 
 // Save executes the query and returns the number of nodes affected by the update operation.
@@ -331,6 +357,35 @@ func (_u *TransactionUpdate) sqlSave(ctx context.Context) (_node int, err error)
 	}
 	if _u.mutation.ResponseCleared() {
 		_spec.ClearField(transaction.FieldResponse, field.TypeJSON)
+	}
+	if _u.mutation.BlockCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   transaction.BlockTable,
+			Columns: []string{transaction.BlockColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(block.FieldID, field.TypeInt),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.BlockIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   transaction.BlockTable,
+			Columns: []string{transaction.BlockColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(block.FieldID, field.TypeInt),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
 	if _node, err = sqlgraph.UpdateNodes(ctx, _u.driver, _spec); err != nil {
 		if _, ok := err.(*sqlgraph.NotFoundError); ok {
@@ -542,9 +597,34 @@ func (_u *TransactionUpdateOne) ClearResponse() *TransactionUpdateOne {
 	return _u
 }
 
+// SetBlockID sets the "block" edge to the Block entity by ID.
+func (_u *TransactionUpdateOne) SetBlockID(id int) *TransactionUpdateOne {
+	_u.mutation.SetBlockID(id)
+	return _u
+}
+
+// SetNillableBlockID sets the "block" edge to the Block entity by ID if the given value is not nil.
+func (_u *TransactionUpdateOne) SetNillableBlockID(id *int) *TransactionUpdateOne {
+	if id != nil {
+		_u = _u.SetBlockID(*id)
+	}
+	return _u
+}
+
+// SetBlock sets the "block" edge to the Block entity.
+func (_u *TransactionUpdateOne) SetBlock(v *Block) *TransactionUpdateOne {
+	return _u.SetBlockID(v.ID)
+}
+
 // Mutation returns the TransactionMutation object of the builder.
 func (_u *TransactionUpdateOne) Mutation() *TransactionMutation {
 	return _u.mutation
+}
+
+// ClearBlock clears the "block" edge to the Block entity.
+func (_u *TransactionUpdateOne) ClearBlock() *TransactionUpdateOne {
+	_u.mutation.ClearBlock()
+	return _u
 }
 
 // Where appends a list predicates to the TransactionUpdate builder.
@@ -684,6 +764,35 @@ func (_u *TransactionUpdateOne) sqlSave(ctx context.Context) (_node *Transaction
 	}
 	if _u.mutation.ResponseCleared() {
 		_spec.ClearField(transaction.FieldResponse, field.TypeJSON)
+	}
+	if _u.mutation.BlockCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   transaction.BlockTable,
+			Columns: []string{transaction.BlockColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(block.FieldID, field.TypeInt),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := _u.mutation.BlockIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   transaction.BlockTable,
+			Columns: []string{transaction.BlockColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(block.FieldID, field.TypeInt),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
 	_node = &Transaction{config: _u.config}
 	_spec.Assign = _node.assignValues

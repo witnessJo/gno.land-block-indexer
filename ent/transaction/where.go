@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"entgo.io/ent/dialect/sql"
+	"entgo.io/ent/dialect/sql/sqlgraph"
 	"gno.land-block-indexer/ent/predicate"
 )
 
@@ -472,6 +473,29 @@ func CreatedAtLT(v time.Time) predicate.Transaction {
 // CreatedAtLTE applies the LTE predicate on the "created_at" field.
 func CreatedAtLTE(v time.Time) predicate.Transaction {
 	return predicate.Transaction(sql.FieldLTE(FieldCreatedAt, v))
+}
+
+// HasBlock applies the HasEdge predicate on the "block" edge.
+func HasBlock() predicate.Transaction {
+	return predicate.Transaction(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, BlockTable, BlockColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasBlockWith applies the HasEdge predicate on the "block" edge with a given conditions (other predicates).
+func HasBlockWith(preds ...predicate.Block) predicate.Transaction {
+	return predicate.Transaction(func(s *sql.Selector) {
+		step := newBlockStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
 }
 
 // And groups predicates with the AND operator between them.

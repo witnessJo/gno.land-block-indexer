@@ -14,6 +14,7 @@ import (
 	"entgo.io/ent"
 	"entgo.io/ent/dialect"
 	"entgo.io/ent/dialect/sql"
+	"entgo.io/ent/dialect/sql/sqlgraph"
 	"gno.land-block-indexer/ent/block"
 	"gno.land-block-indexer/ent/transaction"
 )
@@ -314,6 +315,22 @@ func (c *BlockClient) GetX(ctx context.Context, id int) *Block {
 	return obj
 }
 
+// QueryTransactions queries the transactions edge of a Block.
+func (c *BlockClient) QueryTransactions(_m *Block) *TransactionQuery {
+	query := (&TransactionClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(block.Table, block.FieldID, id),
+			sqlgraph.To(transaction.Table, transaction.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, block.TransactionsTable, block.TransactionsColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
 // Hooks returns the client hooks.
 func (c *BlockClient) Hooks() []Hook {
 	return c.hooks.Block
@@ -445,6 +462,22 @@ func (c *TransactionClient) GetX(ctx context.Context, id int) *Transaction {
 		panic(err)
 	}
 	return obj
+}
+
+// QueryBlock queries the block edge of a Transaction.
+func (c *TransactionClient) QueryBlock(_m *Transaction) *BlockQuery {
+	query := (&BlockClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(transaction.Table, transaction.FieldID, id),
+			sqlgraph.To(block.Table, block.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, transaction.BlockTable, transaction.BlockColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
 }
 
 // Hooks returns the client hooks.

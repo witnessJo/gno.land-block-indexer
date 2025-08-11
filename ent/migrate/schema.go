@@ -12,7 +12,7 @@ var (
 	BlocksColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeInt, Increment: true},
 		{Name: "hash", Type: field.TypeString},
-		{Name: "height", Type: field.TypeInt},
+		{Name: "height", Type: field.TypeInt, Unique: true},
 		{Name: "time", Type: field.TypeTime},
 		{Name: "total_txs", Type: field.TypeInt},
 		{Name: "num_txs", Type: field.TypeInt},
@@ -38,12 +38,21 @@ var (
 		{Name: "messages", Type: field.TypeJSON, Nullable: true},
 		{Name: "response", Type: field.TypeJSON, Nullable: true},
 		{Name: "created_at", Type: field.TypeTime},
+		{Name: "block_transactions", Type: field.TypeInt, Nullable: true},
 	}
 	// TransactionsTable holds the schema information for the "transactions" table.
 	TransactionsTable = &schema.Table{
 		Name:       "transactions",
 		Columns:    TransactionsColumns,
 		PrimaryKey: []*schema.Column{TransactionsColumns[0]},
+		ForeignKeys: []*schema.ForeignKey{
+			{
+				Symbol:     "transactions_blocks_transactions",
+				Columns:    []*schema.Column{TransactionsColumns[12]},
+				RefColumns: []*schema.Column{BlocksColumns[0]},
+				OnDelete:   schema.SetNull,
+			},
+		},
 	}
 	// Tables holds all the tables in the schema.
 	Tables = []*schema.Table{
@@ -53,4 +62,5 @@ var (
 )
 
 func init() {
+	TransactionsTable.ForeignKeys[0].RefTable = BlocksTable
 }

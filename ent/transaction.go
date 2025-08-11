@@ -10,6 +10,7 @@ import (
 
 	"entgo.io/ent"
 	"entgo.io/ent/dialect/sql"
+	"gno.land-block-indexer/ent/block"
 	"gno.land-block-indexer/ent/schema"
 	"gno.land-block-indexer/ent/transaction"
 )
@@ -40,8 +41,32 @@ type Transaction struct {
 	// Response of the transaction
 	Response schema.Response `json:"response,omitempty"`
 	// Creation time of the transaction
-	CreatedAt    time.Time `json:"created_at,omitempty"`
-	selectValues sql.SelectValues
+	CreatedAt time.Time `json:"created_at,omitempty"`
+	// Edges holds the relations/edges for other nodes in the graph.
+	// The values are being populated by the TransactionQuery when eager-loading is set.
+	Edges              TransactionEdges `json:"edges"`
+	block_transactions *int
+	selectValues       sql.SelectValues
+}
+
+// TransactionEdges holds the relations/edges for other nodes in the graph.
+type TransactionEdges struct {
+	// Block holds the value of the block edge.
+	Block *Block `json:"block,omitempty"`
+	// loadedTypes holds the information for reporting if a
+	// type was loaded (or requested) in eager-loading or not.
+	loadedTypes [1]bool
+}
+
+// BlockOrErr returns the Block value or an error if the edge
+// was not loaded in eager-loading, or loaded but was not found.
+func (e TransactionEdges) BlockOrErr() (*Block, error) {
+	if e.Block != nil {
+		return e.Block, nil
+	} else if e.loadedTypes[0] {
+		return nil, &NotFoundError{label: block.Label}
+	}
+	return nil, &NotLoadedError{edge: "block"}
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
@@ -61,6 +86,8 @@ func (*Transaction) scanValues(columns []string) ([]any, error) {
 			values[i] = new(sql.NullString)
 		case transaction.FieldCreatedAt:
 			values[i] = new(sql.NullTime)
+		case transaction.ForeignKeys[0]: // block_transactions
+			values[i] = new(sql.NullInt64)
 		default:
 			values[i] = new(sql.UnknownType)
 		}
@@ -154,6 +181,13 @@ func (_m *Transaction) assignValues(columns []string, values []any) error {
 			} else if value.Valid {
 				_m.CreatedAt = value.Time
 			}
+		case transaction.ForeignKeys[0]:
+			if value, ok := values[i].(*sql.NullInt64); !ok {
+				return fmt.Errorf("unexpected type %T for edge-field block_transactions", value)
+			} else if value.Valid {
+				_m.block_transactions = new(int)
+				*_m.block_transactions = int(value.Int64)
+			}
 		default:
 			_m.selectValues.Set(columns[i], values[i])
 		}
@@ -165,6 +199,11 @@ func (_m *Transaction) assignValues(columns []string, values []any) error {
 // This includes values selected through modifiers, order, etc.
 func (_m *Transaction) Value(name string) (ent.Value, error) {
 	return _m.selectValues.Get(name)
+}
+
+// QueryBlock queries the "block" edge of the Transaction entity.
+func (_m *Transaction) QueryBlock() *BlockQuery {
+	return NewTransactionClient(_m.config).QueryBlock(_m)
 }
 
 // Update returns a builder for updating this Transaction.
