@@ -12,7 +12,6 @@ type Repository interface {
 	AddBlocks(ctx context.Context, blocks []*model.Block) error
 	GetBlock(ctx context.Context, blockNum int) (*model.Block, error)
 	GetBlocks(ctx context.Context, offset int, limit int) ([]model.Block, error)
-	GetHighestBlock(ctx context.Context) (*model.Block, error)
 
 	// transaction operations
 	AddTransaction(ctx context.Context, blockNum int, tx *model.Transaction) error
@@ -23,7 +22,11 @@ type Repository interface {
 	// account operations
 	AddAccount(ctx context.Context, account *model.Account) error
 	GetAccount(ctx context.Context, address string, token string) (*model.Account, error)
+	GetAccounts(ctx context.Context, address string, token string) ([]model.Account, error)
 	IncrementAccountBalance(ctx context.Context, address string, token string, amount int64) error
+
+	// token balances
+	GetBalances(ctx context.Context, address string) ([]model.TokenBalance, error)
 
 	// transfer operations
 	AddTransfer(ctx context.Context, tx *model.Transaction, transfer *model.Transfer) error

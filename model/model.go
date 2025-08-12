@@ -107,6 +107,11 @@ type Account struct {
 	CreatedAt time.Time `json:"created_at"` // Creation time of the account
 }
 
+type TokenBalance struct {
+	Token  string  `json:"token"`  // Token associated with the balance
+	Amount float64 `json:"amount"` // Amount of the token in the balance
+}
+
 type Transfer struct {
 	Func        string    `json:"func"`         // Function name of the transfer
 	FromAddress string    `json:"from_address"` // Address of the sender

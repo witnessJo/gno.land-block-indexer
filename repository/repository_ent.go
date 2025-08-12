@@ -307,6 +307,56 @@ func (r *RepositoryEnt) GetAccount(ctx context.Context, address string, token st
 	}, nil
 }
 
+// GetAccounts implements Repository.
+func (r *RepositoryEnt) GetAccounts(ctx context.Context, address string, token string) ([]model.Account, error) {
+	accounts, err := r.client.Account.Query().
+		Where(
+			account.IDEQ(address),
+			account.TokenEQ(token),
+		).All(ctx)
+	if err != nil {
+		if ent.IsNotFound(err) {
+			return nil, nil // No accounts found
+		}
+		return nil, r.logger.Errorf("failed to get accounts for %s: %v", address, err)
+	}
+
+	accountModels := make([]model.Account, len(accounts))
+	for i, entAccount := range accounts {
+		accountModels[i] = model.Account{
+			Address: address,
+			Token:   token,
+			Amount:  entAccount.Amount,
+		}
+	}
+
+	return accountModels, nil
+}
+
+// GetBalances implements Repository.
+func (r *RepositoryEnt) GetBalances(ctx context.Context, address string) ([]model.TokenBalance, error) {
+	// group by token
+	var balances []model.TokenBalance
+	var accountQuery *ent.AccountGroupBy
+	if address == "" {
+		accountQuery = r.client.Account.Query().
+			GroupBy(account.FieldToken)
+	} else {
+		accountQuery = r.client.Account.Query().
+			Where(account.IDEQ(address)).
+			GroupBy(account.FieldToken)
+	}
+	err := accountQuery.Scan(ctx, &balances)
+	if err != nil {
+		if ent.IsNotFound(err) {
+			return nil, nil // No balances found
+		}
+		return nil, r.logger.Errorf("failed to get balances for %s: %v", address, err)
+	}
+
+	return balances, nil
+}
+
 // IncrementAccountBalance implements Repository.
 func (r *RepositoryEnt) IncrementAccountBalance(ctx context.Context, address string, token string, amount int64) error {
 	// Use a transaction to ensure atomicity
