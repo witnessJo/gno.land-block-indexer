@@ -443,13 +443,23 @@ func (r *RepositoryEnt) AddTransfers(ctx context.Context, tx *model.Transaction,
 
 // GetTransfers implements Repository.
 func (r *RepositoryEnt) GetTransfers(ctx context.Context, fromAccountOr string, toAccountOr string, token string) ([]model.Transfer, error) {
-	transfers, err := r.client.Transfer.Query().
-		Where(
-			transfer.Or(
-				transfer.FromAddressEQ(fromAccountOr),
-				transfer.ToAddressEQ(toAccountOr),
-			),
-		).All(ctx)
+	transferQuery := r.client.Transfer.Query()
+	if fromAccountOr != "" {
+		transferQuery = transferQuery.Where(
+			transfer.Or(transfer.FromAddressEQ(fromAccountOr)),
+		)
+	}
+	if toAccountOr != "" {
+		transferQuery = transferQuery.Where(
+			transfer.Or(transfer.ToAddressEQ(toAccountOr)),
+		)
+	}
+	if token != "" {
+		transferQuery = transferQuery.Where(
+			transfer.TokenEQ(token),
+		)
+	}
+	transfers, err := transferQuery.Where(transfer.Func("transfer")).All(ctx)
 	if err != nil {
 		if ent.IsNotFound(err) {
 			return nil, nil // Transfer not found

@@ -88,6 +88,9 @@ func (c *Controller) GetTokenBalances(gCtx *gin.Context) {
 			Amount:    int64(account.Amount),
 		})
 	}
+	if len(response.Balances) == 0 {
+		response.Balances = []Balance{}
+	}
 
 	gCtx.JSON(200, response)
 }
@@ -165,6 +168,9 @@ func (c *Controller) GetTransferHistory(gCtx *gin.Context) {
 			Token:       transferHistory.Token,
 			Amount:      int64(transferHistory.Amount),
 		})
+	}
+	if len(response.Transfer) == 0 {
+		response.Transfer = []Transfer{}
 	}
 
 	gCtx.JSON(200, response)
