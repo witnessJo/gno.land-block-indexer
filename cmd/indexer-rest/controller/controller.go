@@ -3,6 +3,7 @@ package controller
 import (
 	"context"
 	"strconv"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 	"gno.land-block-indexer/cmd/indexer-rest/service"
@@ -39,8 +40,8 @@ func NewController(logger log.Logger) *Controller {
 }
 
 func (c *Controller) Run(ctx context.Context) error {
-	c.engine.GET("/account/balances", c.GetBalances)
-	c.engine.GET("/token/:token_path/balances", c.GetTokenBalances)
+	c.engine.GET("/account/balances", c.GetTokenBalances)
+	c.engine.GET("/tokens/*token_path", c.GetTokenAccountBalances)
 	c.engine.GET("/transfer/history", c.GetTransferHistory)
 
 	// Start the HTTP server
@@ -56,7 +57,7 @@ func (c *Controller) Run(ctx context.Context) error {
 	return nil
 }
 
-func (c *Controller) GetBalances(gCtx *gin.Context) {
+func (c *Controller) GetTokenBalances(gCtx *gin.Context) {
 	ctx := gCtx.Request.Context()
 	var request struct {
 		Address string `json:"address" binding:"required"`
@@ -88,31 +89,32 @@ func (c *Controller) GetBalances(gCtx *gin.Context) {
 	return
 }
 
-func (c *Controller) GetTokenBalances(gCtx *gin.Context) {
+func (c *Controller) GetTokenAccountBalances(gCtx *gin.Context) {
 	ctx := gCtx.Request.Context()
-	// get token_path from URL parameters
-	tokenPath := gCtx.Param("token_path")
-	if tokenPath == "" {
-		c.logger.Errorf("Token path is required")
-		gCtx.JSON(400, gin.H{"error": "Token path is required"})
+	// get token_path from URL parameters (remove leading slash from wildcard capture)
+	paramPath := gCtx.Param("token_path")
+	c.logger.Infof("Received request for token path: %s", paramPath)
+
+	if !strings.HasSuffix(paramPath, "/balances") {
+		gCtx.JSON(404, gin.H{"error": "endpoint not found"})
 		return
 	}
-	var request struct {
-		TokenPath string `json:"token_path" binding:"required"`
-		Address   string `json:"address" binding:"required"`
-	}
 
-	token, err := c.service.GetTokenBalances(ctx, request.Address)
+	tokenPath := strings.TrimSuffix(paramPath, "/balances")
+	tokenPath = strings.TrimPrefix(tokenPath, "/")
+	address := gCtx.Query("address")
+
+	token, err := c.service.GetTokenAccountBalances(ctx, tokenPath, address)
 	if err != nil {
 		return
 	}
 	if token == nil {
-		c.logger.Errorf("Token not found for path: %s", request.TokenPath)
+		c.logger.Errorf("Token not found for path: %s", address)
 		gCtx.JSON(404, gin.H{"error": "Token not found"})
 		return
 	}
 	gCtx.JSON(200, gin.H{
-		"token_path": request.TokenPath,
+		"token_path": tokenPath,
 		"balances":   token,
 	})
 	return
