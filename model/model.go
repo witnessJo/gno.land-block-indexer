@@ -108,6 +108,7 @@ type Account struct {
 }
 
 type Transfer struct {
+	Func        string    `json:"func"`         // Function name of the transfer
 	FromAddress string    `json:"from_address"` // Address of the sender
 	ToAddress   string    `json:"to_address"`   // Address of the receiver
 	Token       string    `json:"token"`        // Token associated with the transfer

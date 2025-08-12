@@ -9,7 +9,6 @@ import (
 
 	"entgo.io/ent"
 	"entgo.io/ent/dialect/sql"
-	"gno.land-block-indexer/ent/account"
 	"gno.land-block-indexer/ent/transfer"
 )
 
@@ -19,6 +18,10 @@ type Transfer struct {
 	// ID of the ent.
 	// ID of the transfer used as primary key
 	ID int `json:"id,omitempty"`
+	// Hash of the transfer transaction
+	Hash string `json:"hash,omitempty"`
+	// Function name of the transfer
+	Func string `json:"func,omitempty"`
 	// Address of the sender
 	FromAddress string `json:"from_address,omitempty"`
 	// Address of the receiver
@@ -30,32 +33,10 @@ type Transfer struct {
 	// Denomination of the transferred amount
 	Denom string `json:"denom,omitempty"`
 	// Creation time of the transfer
-	CreatedAt time.Time `json:"created_at,omitempty"`
-	// Edges holds the relations/edges for other nodes in the graph.
-	// The values are being populated by the TransferQuery when eager-loading is set.
-	Edges             TransferEdges `json:"edges"`
-	account_transfers *string
-	selectValues      sql.SelectValues
-}
-
-// TransferEdges holds the relations/edges for other nodes in the graph.
-type TransferEdges struct {
-	// Account holds the value of the account edge.
-	Account *Account `json:"account,omitempty"`
-	// loadedTypes holds the information for reporting if a
-	// type was loaded (or requested) in eager-loading or not.
-	loadedTypes [1]bool
-}
-
-// AccountOrErr returns the Account value or an error if the edge
-// was not loaded in eager-loading, or loaded but was not found.
-func (e TransferEdges) AccountOrErr() (*Account, error) {
-	if e.Account != nil {
-		return e.Account, nil
-	} else if e.loadedTypes[0] {
-		return nil, &NotFoundError{label: account.Label}
-	}
-	return nil, &NotLoadedError{edge: "account"}
+	CreatedAt    time.Time `json:"created_at,omitempty"`
+	to_address   *string
+	from_address *string
+	selectValues sql.SelectValues
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
@@ -67,11 +48,13 @@ func (*Transfer) scanValues(columns []string) ([]any, error) {
 			values[i] = new(sql.NullFloat64)
 		case transfer.FieldID:
 			values[i] = new(sql.NullInt64)
-		case transfer.FieldFromAddress, transfer.FieldToAddress, transfer.FieldToken, transfer.FieldDenom:
+		case transfer.FieldHash, transfer.FieldFunc, transfer.FieldFromAddress, transfer.FieldToAddress, transfer.FieldToken, transfer.FieldDenom:
 			values[i] = new(sql.NullString)
 		case transfer.FieldCreatedAt:
 			values[i] = new(sql.NullTime)
-		case transfer.ForeignKeys[0]: // account_transfers
+		case transfer.ForeignKeys[0]: // to_address
+			values[i] = new(sql.NullString)
+		case transfer.ForeignKeys[1]: // from_address
 			values[i] = new(sql.NullString)
 		default:
 			values[i] = new(sql.UnknownType)
@@ -94,6 +77,18 @@ func (_m *Transfer) assignValues(columns []string, values []any) error {
 				return fmt.Errorf("unexpected type %T for field id", value)
 			}
 			_m.ID = int(value.Int64)
+		case transfer.FieldHash:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field hash", values[i])
+			} else if value.Valid {
+				_m.Hash = value.String
+			}
+		case transfer.FieldFunc:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field func", values[i])
+			} else if value.Valid {
+				_m.Func = value.String
+			}
 		case transfer.FieldFromAddress:
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field from_address", values[i])
@@ -132,10 +127,17 @@ func (_m *Transfer) assignValues(columns []string, values []any) error {
 			}
 		case transfer.ForeignKeys[0]:
 			if value, ok := values[i].(*sql.NullString); !ok {
-				return fmt.Errorf("unexpected type %T for field account_transfers", values[i])
+				return fmt.Errorf("unexpected type %T for field to_address", values[i])
 			} else if value.Valid {
-				_m.account_transfers = new(string)
-				*_m.account_transfers = value.String
+				_m.to_address = new(string)
+				*_m.to_address = value.String
+			}
+		case transfer.ForeignKeys[1]:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field from_address", values[i])
+			} else if value.Valid {
+				_m.from_address = new(string)
+				*_m.from_address = value.String
 			}
 		default:
 			_m.selectValues.Set(columns[i], values[i])
@@ -148,11 +150,6 @@ func (_m *Transfer) assignValues(columns []string, values []any) error {
 // This includes values selected through modifiers, order, etc.
 func (_m *Transfer) Value(name string) (ent.Value, error) {
 	return _m.selectValues.Get(name)
-}
-
-// QueryAccount queries the "account" edge of the Transfer entity.
-func (_m *Transfer) QueryAccount() *AccountQuery {
-	return NewTransferClient(_m.config).QueryAccount(_m)
 }
 
 // Update returns a builder for updating this Transfer.
@@ -178,6 +175,12 @@ func (_m *Transfer) String() string {
 	var builder strings.Builder
 	builder.WriteString("Transfer(")
 	builder.WriteString(fmt.Sprintf("id=%v, ", _m.ID))
+	builder.WriteString("hash=")
+	builder.WriteString(_m.Hash)
+	builder.WriteString(", ")
+	builder.WriteString("func=")
+	builder.WriteString(_m.Func)
+	builder.WriteString(", ")
 	builder.WriteString("from_address=")
 	builder.WriteString(_m.FromAddress)
 	builder.WriteString(", ")

@@ -10,7 +10,6 @@ import (
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
-	"gno.land-block-indexer/ent/account"
 	"gno.land-block-indexer/ent/predicate"
 	"gno.land-block-indexer/ent/transfer"
 )
@@ -28,6 +27,34 @@ func (_u *TransferUpdate) Where(ps ...predicate.Transfer) *TransferUpdate {
 	return _u
 }
 
+// SetHash sets the "hash" field.
+func (_u *TransferUpdate) SetHash(v string) *TransferUpdate {
+	_u.mutation.SetHash(v)
+	return _u
+}
+
+// SetNillableHash sets the "hash" field if the given value is not nil.
+func (_u *TransferUpdate) SetNillableHash(v *string) *TransferUpdate {
+	if v != nil {
+		_u.SetHash(*v)
+	}
+	return _u
+}
+
+// SetFunc sets the "func" field.
+func (_u *TransferUpdate) SetFunc(v string) *TransferUpdate {
+	_u.mutation.SetFunc(v)
+	return _u
+}
+
+// SetNillableFunc sets the "func" field if the given value is not nil.
+func (_u *TransferUpdate) SetNillableFunc(v *string) *TransferUpdate {
+	if v != nil {
+		_u.SetFunc(*v)
+	}
+	return _u
+}
+
 // SetFromAddress sets the "from_address" field.
 func (_u *TransferUpdate) SetFromAddress(v string) *TransferUpdate {
 	_u.mutation.SetFromAddress(v)
@@ -42,6 +69,12 @@ func (_u *TransferUpdate) SetNillableFromAddress(v *string) *TransferUpdate {
 	return _u
 }
 
+// ClearFromAddress clears the value of the "from_address" field.
+func (_u *TransferUpdate) ClearFromAddress() *TransferUpdate {
+	_u.mutation.ClearFromAddress()
+	return _u
+}
+
 // SetToAddress sets the "to_address" field.
 func (_u *TransferUpdate) SetToAddress(v string) *TransferUpdate {
 	_u.mutation.SetToAddress(v)
@@ -53,6 +86,12 @@ func (_u *TransferUpdate) SetNillableToAddress(v *string) *TransferUpdate {
 	if v != nil {
 		_u.SetToAddress(*v)
 	}
+	return _u
+}
+
+// ClearToAddress clears the value of the "to_address" field.
+func (_u *TransferUpdate) ClearToAddress() *TransferUpdate {
+	_u.mutation.ClearToAddress()
 	return _u
 }
 
@@ -105,34 +144,9 @@ func (_u *TransferUpdate) SetNillableDenom(v *string) *TransferUpdate {
 	return _u
 }
 
-// SetAccountID sets the "account" edge to the Account entity by ID.
-func (_u *TransferUpdate) SetAccountID(id string) *TransferUpdate {
-	_u.mutation.SetAccountID(id)
-	return _u
-}
-
-// SetNillableAccountID sets the "account" edge to the Account entity by ID if the given value is not nil.
-func (_u *TransferUpdate) SetNillableAccountID(id *string) *TransferUpdate {
-	if id != nil {
-		_u = _u.SetAccountID(*id)
-	}
-	return _u
-}
-
-// SetAccount sets the "account" edge to the Account entity.
-func (_u *TransferUpdate) SetAccount(v *Account) *TransferUpdate {
-	return _u.SetAccountID(v.ID)
-}
-
 // Mutation returns the TransferMutation object of the builder.
 func (_u *TransferUpdate) Mutation() *TransferMutation {
 	return _u.mutation
-}
-
-// ClearAccount clears the "account" edge to the Account entity.
-func (_u *TransferUpdate) ClearAccount() *TransferUpdate {
-	_u.mutation.ClearAccount()
-	return _u
 }
 
 // Save executes the query and returns the number of nodes affected by the update operation.
@@ -164,14 +178,14 @@ func (_u *TransferUpdate) ExecX(ctx context.Context) {
 
 // check runs all checks and user-defined validators on the builder.
 func (_u *TransferUpdate) check() error {
-	if v, ok := _u.mutation.FromAddress(); ok {
-		if err := transfer.FromAddressValidator(v); err != nil {
-			return &ValidationError{Name: "from_address", err: fmt.Errorf(`ent: validator failed for field "Transfer.from_address": %w`, err)}
+	if v, ok := _u.mutation.Hash(); ok {
+		if err := transfer.HashValidator(v); err != nil {
+			return &ValidationError{Name: "hash", err: fmt.Errorf(`ent: validator failed for field "Transfer.hash": %w`, err)}
 		}
 	}
-	if v, ok := _u.mutation.ToAddress(); ok {
-		if err := transfer.ToAddressValidator(v); err != nil {
-			return &ValidationError{Name: "to_address", err: fmt.Errorf(`ent: validator failed for field "Transfer.to_address": %w`, err)}
+	if v, ok := _u.mutation.Func(); ok {
+		if err := transfer.FuncValidator(v); err != nil {
+			return &ValidationError{Name: "func", err: fmt.Errorf(`ent: validator failed for field "Transfer.func": %w`, err)}
 		}
 	}
 	if v, ok := _u.mutation.Token(); ok {
@@ -204,11 +218,23 @@ func (_u *TransferUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 			}
 		}
 	}
+	if value, ok := _u.mutation.Hash(); ok {
+		_spec.SetField(transfer.FieldHash, field.TypeString, value)
+	}
+	if value, ok := _u.mutation.Func(); ok {
+		_spec.SetField(transfer.FieldFunc, field.TypeString, value)
+	}
 	if value, ok := _u.mutation.FromAddress(); ok {
 		_spec.SetField(transfer.FieldFromAddress, field.TypeString, value)
 	}
+	if _u.mutation.FromAddressCleared() {
+		_spec.ClearField(transfer.FieldFromAddress, field.TypeString)
+	}
 	if value, ok := _u.mutation.ToAddress(); ok {
 		_spec.SetField(transfer.FieldToAddress, field.TypeString, value)
+	}
+	if _u.mutation.ToAddressCleared() {
+		_spec.ClearField(transfer.FieldToAddress, field.TypeString)
 	}
 	if value, ok := _u.mutation.Token(); ok {
 		_spec.SetField(transfer.FieldToken, field.TypeString, value)
@@ -221,35 +247,6 @@ func (_u *TransferUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 	}
 	if value, ok := _u.mutation.Denom(); ok {
 		_spec.SetField(transfer.FieldDenom, field.TypeString, value)
-	}
-	if _u.mutation.AccountCleared() {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.M2O,
-			Inverse: true,
-			Table:   transfer.AccountTable,
-			Columns: []string{transfer.AccountColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(account.FieldID, field.TypeString),
-			},
-		}
-		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
-	}
-	if nodes := _u.mutation.AccountIDs(); len(nodes) > 0 {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.M2O,
-			Inverse: true,
-			Table:   transfer.AccountTable,
-			Columns: []string{transfer.AccountColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(account.FieldID, field.TypeString),
-			},
-		}
-		for _, k := range nodes {
-			edge.Target.Nodes = append(edge.Target.Nodes, k)
-		}
-		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
 	if _node, err = sqlgraph.UpdateNodes(ctx, _u.driver, _spec); err != nil {
 		if _, ok := err.(*sqlgraph.NotFoundError); ok {
@@ -271,6 +268,34 @@ type TransferUpdateOne struct {
 	mutation *TransferMutation
 }
 
+// SetHash sets the "hash" field.
+func (_u *TransferUpdateOne) SetHash(v string) *TransferUpdateOne {
+	_u.mutation.SetHash(v)
+	return _u
+}
+
+// SetNillableHash sets the "hash" field if the given value is not nil.
+func (_u *TransferUpdateOne) SetNillableHash(v *string) *TransferUpdateOne {
+	if v != nil {
+		_u.SetHash(*v)
+	}
+	return _u
+}
+
+// SetFunc sets the "func" field.
+func (_u *TransferUpdateOne) SetFunc(v string) *TransferUpdateOne {
+	_u.mutation.SetFunc(v)
+	return _u
+}
+
+// SetNillableFunc sets the "func" field if the given value is not nil.
+func (_u *TransferUpdateOne) SetNillableFunc(v *string) *TransferUpdateOne {
+	if v != nil {
+		_u.SetFunc(*v)
+	}
+	return _u
+}
+
 // SetFromAddress sets the "from_address" field.
 func (_u *TransferUpdateOne) SetFromAddress(v string) *TransferUpdateOne {
 	_u.mutation.SetFromAddress(v)
@@ -285,6 +310,12 @@ func (_u *TransferUpdateOne) SetNillableFromAddress(v *string) *TransferUpdateOn
 	return _u
 }
 
+// ClearFromAddress clears the value of the "from_address" field.
+func (_u *TransferUpdateOne) ClearFromAddress() *TransferUpdateOne {
+	_u.mutation.ClearFromAddress()
+	return _u
+}
+
 // SetToAddress sets the "to_address" field.
 func (_u *TransferUpdateOne) SetToAddress(v string) *TransferUpdateOne {
 	_u.mutation.SetToAddress(v)
@@ -296,6 +327,12 @@ func (_u *TransferUpdateOne) SetNillableToAddress(v *string) *TransferUpdateOne 
 	if v != nil {
 		_u.SetToAddress(*v)
 	}
+	return _u
+}
+
+// ClearToAddress clears the value of the "to_address" field.
+func (_u *TransferUpdateOne) ClearToAddress() *TransferUpdateOne {
+	_u.mutation.ClearToAddress()
 	return _u
 }
 
@@ -348,34 +385,9 @@ func (_u *TransferUpdateOne) SetNillableDenom(v *string) *TransferUpdateOne {
 	return _u
 }
 
-// SetAccountID sets the "account" edge to the Account entity by ID.
-func (_u *TransferUpdateOne) SetAccountID(id string) *TransferUpdateOne {
-	_u.mutation.SetAccountID(id)
-	return _u
-}
-
-// SetNillableAccountID sets the "account" edge to the Account entity by ID if the given value is not nil.
-func (_u *TransferUpdateOne) SetNillableAccountID(id *string) *TransferUpdateOne {
-	if id != nil {
-		_u = _u.SetAccountID(*id)
-	}
-	return _u
-}
-
-// SetAccount sets the "account" edge to the Account entity.
-func (_u *TransferUpdateOne) SetAccount(v *Account) *TransferUpdateOne {
-	return _u.SetAccountID(v.ID)
-}
-
 // Mutation returns the TransferMutation object of the builder.
 func (_u *TransferUpdateOne) Mutation() *TransferMutation {
 	return _u.mutation
-}
-
-// ClearAccount clears the "account" edge to the Account entity.
-func (_u *TransferUpdateOne) ClearAccount() *TransferUpdateOne {
-	_u.mutation.ClearAccount()
-	return _u
 }
 
 // Where appends a list predicates to the TransferUpdate builder.
@@ -420,14 +432,14 @@ func (_u *TransferUpdateOne) ExecX(ctx context.Context) {
 
 // check runs all checks and user-defined validators on the builder.
 func (_u *TransferUpdateOne) check() error {
-	if v, ok := _u.mutation.FromAddress(); ok {
-		if err := transfer.FromAddressValidator(v); err != nil {
-			return &ValidationError{Name: "from_address", err: fmt.Errorf(`ent: validator failed for field "Transfer.from_address": %w`, err)}
+	if v, ok := _u.mutation.Hash(); ok {
+		if err := transfer.HashValidator(v); err != nil {
+			return &ValidationError{Name: "hash", err: fmt.Errorf(`ent: validator failed for field "Transfer.hash": %w`, err)}
 		}
 	}
-	if v, ok := _u.mutation.ToAddress(); ok {
-		if err := transfer.ToAddressValidator(v); err != nil {
-			return &ValidationError{Name: "to_address", err: fmt.Errorf(`ent: validator failed for field "Transfer.to_address": %w`, err)}
+	if v, ok := _u.mutation.Func(); ok {
+		if err := transfer.FuncValidator(v); err != nil {
+			return &ValidationError{Name: "func", err: fmt.Errorf(`ent: validator failed for field "Transfer.func": %w`, err)}
 		}
 	}
 	if v, ok := _u.mutation.Token(); ok {
@@ -477,11 +489,23 @@ func (_u *TransferUpdateOne) sqlSave(ctx context.Context) (_node *Transfer, err 
 			}
 		}
 	}
+	if value, ok := _u.mutation.Hash(); ok {
+		_spec.SetField(transfer.FieldHash, field.TypeString, value)
+	}
+	if value, ok := _u.mutation.Func(); ok {
+		_spec.SetField(transfer.FieldFunc, field.TypeString, value)
+	}
 	if value, ok := _u.mutation.FromAddress(); ok {
 		_spec.SetField(transfer.FieldFromAddress, field.TypeString, value)
 	}
+	if _u.mutation.FromAddressCleared() {
+		_spec.ClearField(transfer.FieldFromAddress, field.TypeString)
+	}
 	if value, ok := _u.mutation.ToAddress(); ok {
 		_spec.SetField(transfer.FieldToAddress, field.TypeString, value)
+	}
+	if _u.mutation.ToAddressCleared() {
+		_spec.ClearField(transfer.FieldToAddress, field.TypeString)
 	}
 	if value, ok := _u.mutation.Token(); ok {
 		_spec.SetField(transfer.FieldToken, field.TypeString, value)
@@ -494,35 +518,6 @@ func (_u *TransferUpdateOne) sqlSave(ctx context.Context) (_node *Transfer, err 
 	}
 	if value, ok := _u.mutation.Denom(); ok {
 		_spec.SetField(transfer.FieldDenom, field.TypeString, value)
-	}
-	if _u.mutation.AccountCleared() {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.M2O,
-			Inverse: true,
-			Table:   transfer.AccountTable,
-			Columns: []string{transfer.AccountColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(account.FieldID, field.TypeString),
-			},
-		}
-		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
-	}
-	if nodes := _u.mutation.AccountIDs(); len(nodes) > 0 {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.M2O,
-			Inverse: true,
-			Table:   transfer.AccountTable,
-			Columns: []string{transfer.AccountColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(account.FieldID, field.TypeString),
-			},
-		}
-		for _, k := range nodes {
-			edge.Target.Nodes = append(edge.Target.Nodes, k)
-		}
-		_spec.Edges.Add = append(_spec.Edges.Add, edge)
 	}
 	_node = &Transfer{config: _u.config}
 	_spec.Assign = _node.assignValues

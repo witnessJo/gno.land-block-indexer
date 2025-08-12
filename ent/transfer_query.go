@@ -11,7 +11,6 @@ import (
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
-	"gno.land-block-indexer/ent/account"
 	"gno.land-block-indexer/ent/predicate"
 	"gno.land-block-indexer/ent/transfer"
 )
@@ -19,12 +18,11 @@ import (
 // TransferQuery is the builder for querying Transfer entities.
 type TransferQuery struct {
 	config
-	ctx         *QueryContext
-	order       []transfer.OrderOption
-	inters      []Interceptor
-	predicates  []predicate.Transfer
-	withAccount *AccountQuery
-	withFKs     bool
+	ctx        *QueryContext
+	order      []transfer.OrderOption
+	inters     []Interceptor
+	predicates []predicate.Transfer
+	withFKs    bool
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
 	path func(context.Context) (*sql.Selector, error)
@@ -59,28 +57,6 @@ func (_q *TransferQuery) Unique(unique bool) *TransferQuery {
 func (_q *TransferQuery) Order(o ...transfer.OrderOption) *TransferQuery {
 	_q.order = append(_q.order, o...)
 	return _q
-}
-
-// QueryAccount chains the current query on the "account" edge.
-func (_q *TransferQuery) QueryAccount() *AccountQuery {
-	query := (&AccountClient{config: _q.config}).Query()
-	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
-		if err := _q.prepareQuery(ctx); err != nil {
-			return nil, err
-		}
-		selector := _q.sqlQuery(ctx)
-		if err := selector.Err(); err != nil {
-			return nil, err
-		}
-		step := sqlgraph.NewStep(
-			sqlgraph.From(transfer.Table, transfer.FieldID, selector),
-			sqlgraph.To(account.Table, account.FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, true, transfer.AccountTable, transfer.AccountColumn),
-		)
-		fromU = sqlgraph.SetNeighbors(_q.driver.Dialect(), step)
-		return fromU, nil
-	}
-	return query
 }
 
 // First returns the first Transfer entity from the query.
@@ -270,27 +246,15 @@ func (_q *TransferQuery) Clone() *TransferQuery {
 		return nil
 	}
 	return &TransferQuery{
-		config:      _q.config,
-		ctx:         _q.ctx.Clone(),
-		order:       append([]transfer.OrderOption{}, _q.order...),
-		inters:      append([]Interceptor{}, _q.inters...),
-		predicates:  append([]predicate.Transfer{}, _q.predicates...),
-		withAccount: _q.withAccount.Clone(),
+		config:     _q.config,
+		ctx:        _q.ctx.Clone(),
+		order:      append([]transfer.OrderOption{}, _q.order...),
+		inters:     append([]Interceptor{}, _q.inters...),
+		predicates: append([]predicate.Transfer{}, _q.predicates...),
 		// clone intermediate query.
 		sql:  _q.sql.Clone(),
 		path: _q.path,
 	}
-}
-
-// WithAccount tells the query-builder to eager-load the nodes that are connected to
-// the "account" edge. The optional arguments are used to configure the query builder of the edge.
-func (_q *TransferQuery) WithAccount(opts ...func(*AccountQuery)) *TransferQuery {
-	query := (&AccountClient{config: _q.config}).Query()
-	for _, opt := range opts {
-		opt(query)
-	}
-	_q.withAccount = query
-	return _q
 }
 
 // GroupBy is used to group vertices by one or more fields/columns.
@@ -299,12 +263,12 @@ func (_q *TransferQuery) WithAccount(opts ...func(*AccountQuery)) *TransferQuery
 // Example:
 //
 //	var v []struct {
-//		FromAddress string `json:"from_address,omitempty"`
+//		Hash string `json:"hash,omitempty"`
 //		Count int `json:"count,omitempty"`
 //	}
 //
 //	client.Transfer.Query().
-//		GroupBy(transfer.FieldFromAddress).
+//		GroupBy(transfer.FieldHash).
 //		Aggregate(ent.Count()).
 //		Scan(ctx, &v)
 func (_q *TransferQuery) GroupBy(field string, fields ...string) *TransferGroupBy {
@@ -322,11 +286,11 @@ func (_q *TransferQuery) GroupBy(field string, fields ...string) *TransferGroupB
 // Example:
 //
 //	var v []struct {
-//		FromAddress string `json:"from_address,omitempty"`
+//		Hash string `json:"hash,omitempty"`
 //	}
 //
 //	client.Transfer.Query().
-//		Select(transfer.FieldFromAddress).
+//		Select(transfer.FieldHash).
 //		Scan(ctx, &v)
 func (_q *TransferQuery) Select(fields ...string) *TransferSelect {
 	_q.ctx.Fields = append(_q.ctx.Fields, fields...)
@@ -369,16 +333,10 @@ func (_q *TransferQuery) prepareQuery(ctx context.Context) error {
 
 func (_q *TransferQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Transfer, error) {
 	var (
-		nodes       = []*Transfer{}
-		withFKs     = _q.withFKs
-		_spec       = _q.querySpec()
-		loadedTypes = [1]bool{
-			_q.withAccount != nil,
-		}
+		nodes   = []*Transfer{}
+		withFKs = _q.withFKs
+		_spec   = _q.querySpec()
 	)
-	if _q.withAccount != nil {
-		withFKs = true
-	}
 	if withFKs {
 		_spec.Node.Columns = append(_spec.Node.Columns, transfer.ForeignKeys...)
 	}
@@ -388,7 +346,6 @@ func (_q *TransferQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Tra
 	_spec.Assign = func(columns []string, values []any) error {
 		node := &Transfer{config: _q.config}
 		nodes = append(nodes, node)
-		node.Edges.loadedTypes = loadedTypes
 		return node.assignValues(columns, values)
 	}
 	for i := range hooks {
@@ -400,46 +357,7 @@ func (_q *TransferQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Tra
 	if len(nodes) == 0 {
 		return nodes, nil
 	}
-	if query := _q.withAccount; query != nil {
-		if err := _q.loadAccount(ctx, query, nodes, nil,
-			func(n *Transfer, e *Account) { n.Edges.Account = e }); err != nil {
-			return nil, err
-		}
-	}
 	return nodes, nil
-}
-
-func (_q *TransferQuery) loadAccount(ctx context.Context, query *AccountQuery, nodes []*Transfer, init func(*Transfer), assign func(*Transfer, *Account)) error {
-	ids := make([]string, 0, len(nodes))
-	nodeids := make(map[string][]*Transfer)
-	for i := range nodes {
-		if nodes[i].account_transfers == nil {
-			continue
-		}
-		fk := *nodes[i].account_transfers
-		if _, ok := nodeids[fk]; !ok {
-			ids = append(ids, fk)
-		}
-		nodeids[fk] = append(nodeids[fk], nodes[i])
-	}
-	if len(ids) == 0 {
-		return nil
-	}
-	query.Where(account.IDIn(ids...))
-	neighbors, err := query.All(ctx)
-	if err != nil {
-		return err
-	}
-	for _, n := range neighbors {
-		nodes, ok := nodeids[n.ID]
-		if !ok {
-			return fmt.Errorf(`unexpected foreign-key "account_transfers" returned %v`, n.ID)
-		}
-		for i := range nodes {
-			assign(nodes[i], n)
-		}
-	}
-	return nil
 }
 
 func (_q *TransferQuery) sqlCount(ctx context.Context) (int, error) {

@@ -8,7 +8,7 @@ import (
 
 type Repository interface {
 	// block operations
-	AddBlock(ctx context.Context, block *model.Block) error
+	AddBlock(ctx context.Context, block *model.Block) (bool, error)
 	AddBlocks(ctx context.Context, blocks []*model.Block) error
 	GetBlock(ctx context.Context, blockNum int) (*model.Block, error)
 	GetBlocks(ctx context.Context, offset int, limit int) ([]model.Block, error)
@@ -26,7 +26,7 @@ type Repository interface {
 	IncrementAccountBalance(ctx context.Context, address string, token string, amount int64) error
 
 	// transfer operations
-	AddTransfer(ctx context.Context, transfer *model.Transfer) error
-	AddTransfers(ctx context.Context, transfers []model.Transfer) error
+	AddTransfer(ctx context.Context, tx *model.Transaction, transfer *model.Transfer) error
+	AddTransfers(ctx context.Context, tx *model.Transaction, transfers []model.Transfer) error
 	GetTransfers(ctx context.Context, fromAccount, toAccount, token string) ([]model.Transfer, error)
 }

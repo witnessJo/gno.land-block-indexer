@@ -345,15 +345,31 @@ func (c *AccountClient) GetX(ctx context.Context, id string) *Account {
 	return obj
 }
 
-// QueryTransfers queries the transfers edge of a Account.
-func (c *AccountClient) QueryTransfers(_m *Account) *TransferQuery {
+// QueryTransfersTo queries the transfers_to edge of a Account.
+func (c *AccountClient) QueryTransfersTo(_m *Account) *TransferQuery {
 	query := (&TransferClient{config: c.config}).Query()
 	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
 		id := _m.ID
 		step := sqlgraph.NewStep(
 			sqlgraph.From(account.Table, account.FieldID, id),
 			sqlgraph.To(transfer.Table, transfer.FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, false, account.TransfersTable, account.TransfersColumn),
+			sqlgraph.Edge(sqlgraph.O2M, false, account.TransfersToTable, account.TransfersToColumn),
+		)
+		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryTransfersFrom queries the transfers_from edge of a Account.
+func (c *AccountClient) QueryTransfersFrom(_m *Account) *TransferQuery {
+	query := (&TransferClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := _m.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(account.Table, account.FieldID, id),
+			sqlgraph.To(transfer.Table, transfer.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, account.TransfersFromTable, account.TransfersFromColumn),
 		)
 		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
 		return fromV, nil
@@ -923,22 +939,6 @@ func (c *TransferClient) GetX(ctx context.Context, id int) *Transfer {
 		panic(err)
 	}
 	return obj
-}
-
-// QueryAccount queries the account edge of a Transfer.
-func (c *TransferClient) QueryAccount(_m *Transfer) *AccountQuery {
-	query := (&AccountClient{config: c.config}).Query()
-	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
-		id := _m.ID
-		step := sqlgraph.NewStep(
-			sqlgraph.From(transfer.Table, transfer.FieldID, id),
-			sqlgraph.To(account.Table, account.FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, true, transfer.AccountTable, transfer.AccountColumn),
-		)
-		fromV = sqlgraph.Neighbors(_m.driver.Dialect(), step)
-		return fromV, nil
-	}
-	return query
 }
 
 // Hooks returns the client hooks.

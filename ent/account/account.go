@@ -16,19 +16,28 @@ const (
 	FieldToken = "token"
 	// FieldAmount holds the string denoting the amount field in the database.
 	FieldAmount = "amount"
-	// EdgeTransfers holds the string denoting the transfers edge name in mutations.
-	EdgeTransfers = "transfers"
+	// EdgeTransfersTo holds the string denoting the transfers_to edge name in mutations.
+	EdgeTransfersTo = "transfers_to"
+	// EdgeTransfersFrom holds the string denoting the transfers_from edge name in mutations.
+	EdgeTransfersFrom = "transfers_from"
 	// TransferFieldID holds the string denoting the ID field of the Transfer.
 	TransferFieldID = "id"
 	// Table holds the table name of the account in the database.
 	Table = "accounts"
-	// TransfersTable is the table that holds the transfers relation/edge.
-	TransfersTable = "transfers"
-	// TransfersInverseTable is the table name for the Transfer entity.
+	// TransfersToTable is the table that holds the transfers_to relation/edge.
+	TransfersToTable = "transfers"
+	// TransfersToInverseTable is the table name for the Transfer entity.
 	// It exists in this package in order to avoid circular dependency with the "transfer" package.
-	TransfersInverseTable = "transfers"
-	// TransfersColumn is the table column denoting the transfers relation/edge.
-	TransfersColumn = "account_transfers"
+	TransfersToInverseTable = "transfers"
+	// TransfersToColumn is the table column denoting the transfers_to relation/edge.
+	TransfersToColumn = "to_address"
+	// TransfersFromTable is the table that holds the transfers_from relation/edge.
+	TransfersFromTable = "transfers"
+	// TransfersFromInverseTable is the table name for the Transfer entity.
+	// It exists in this package in order to avoid circular dependency with the "transfer" package.
+	TransfersFromInverseTable = "transfers"
+	// TransfersFromColumn is the table column denoting the transfers_from relation/edge.
+	TransfersFromColumn = "from_address"
 )
 
 // Columns holds all SQL columns for account fields.
@@ -73,23 +82,44 @@ func ByAmount(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldAmount, opts...).ToFunc()
 }
 
-// ByTransfersCount orders the results by transfers count.
-func ByTransfersCount(opts ...sql.OrderTermOption) OrderOption {
+// ByTransfersToCount orders the results by transfers_to count.
+func ByTransfersToCount(opts ...sql.OrderTermOption) OrderOption {
 	return func(s *sql.Selector) {
-		sqlgraph.OrderByNeighborsCount(s, newTransfersStep(), opts...)
+		sqlgraph.OrderByNeighborsCount(s, newTransfersToStep(), opts...)
 	}
 }
 
-// ByTransfers orders the results by transfers terms.
-func ByTransfers(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+// ByTransfersTo orders the results by transfers_to terms.
+func ByTransfersTo(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
 	return func(s *sql.Selector) {
-		sqlgraph.OrderByNeighborTerms(s, newTransfersStep(), append([]sql.OrderTerm{term}, terms...)...)
+		sqlgraph.OrderByNeighborTerms(s, newTransfersToStep(), append([]sql.OrderTerm{term}, terms...)...)
 	}
 }
-func newTransfersStep() *sqlgraph.Step {
+
+// ByTransfersFromCount orders the results by transfers_from count.
+func ByTransfersFromCount(opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborsCount(s, newTransfersFromStep(), opts...)
+	}
+}
+
+// ByTransfersFrom orders the results by transfers_from terms.
+func ByTransfersFrom(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newTransfersFromStep(), append([]sql.OrderTerm{term}, terms...)...)
+	}
+}
+func newTransfersToStep() *sqlgraph.Step {
 	return sqlgraph.NewStep(
 		sqlgraph.From(Table, FieldID),
-		sqlgraph.To(TransfersInverseTable, TransferFieldID),
-		sqlgraph.Edge(sqlgraph.O2M, false, TransfersTable, TransfersColumn),
+		sqlgraph.To(TransfersToInverseTable, TransferFieldID),
+		sqlgraph.Edge(sqlgraph.O2M, false, TransfersToTable, TransfersToColumn),
+	)
+}
+func newTransfersFromStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(TransfersFromInverseTable, TransferFieldID),
+		sqlgraph.Edge(sqlgraph.O2M, false, TransfersFromTable, TransfersFromColumn),
 	)
 }

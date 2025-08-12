@@ -44,7 +44,7 @@ func TestProcessBlockWithTransactions(t *testing.T) {
 		{
 			Block: &model.Block{
 				Hash:     "B1F8E8C7A5F4D3C2B1A0987654321ABCDEF0123456789",
-				Height:   12345,
+				Height:   123456,
 				Time:     time.Date(2024, 1, 15, 10, 30, 45, 0, time.UTC),
 				TotalTxs: 5,
 				NumTxs:   1,
@@ -84,7 +84,7 @@ func TestProcessBlockWithTransactions(t *testing.T) {
 									},
 									{
 										Key:   "value",
-										Value: "100000000000000", // 1 token in base units
+										Value: "100", // 1 token in base units
 									},
 								},
 							},
@@ -97,8 +97,8 @@ func TestProcessBlockWithTransactions(t *testing.T) {
 									Value string "json:\"value\""
 								}{
 									{
-										Key:   "g17290cwvmrapvp869xfnhhawa8sm9edpufzat7d",
-										Value: "",
+										Key:   "from",
+										Value: "g17290cwvmrapvp869xfnhhawa8sm9edpufzat7d",
 									},
 									{
 										Key:   "to",
@@ -106,7 +106,7 @@ func TestProcessBlockWithTransactions(t *testing.T) {
 									},
 									{
 										Key:   "value",
-										Value: "100000000000000", // 0.5 token in base units
+										Value: "100", // 0.5 token in base units
 									},
 								},
 							},
@@ -128,7 +128,7 @@ func TestProcessBlockWithTransactions(t *testing.T) {
 									},
 									{
 										Key:   "value",
-										Value: "100000000000000", // 0.5 token in base units
+										Value: "100", // 0.5 token in base units
 									},
 								},
 							},

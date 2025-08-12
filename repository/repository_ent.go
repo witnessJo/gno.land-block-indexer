@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	"gno.land-block-indexer/ent"
@@ -70,7 +71,7 @@ func (r *RepositoryEnt) GetHighestBlock(ctx context.Context) (*model.Block, erro
 }
 
 // AddBlock implements Repository.
-func (r *RepositoryEnt) AddBlock(ctx context.Context, block *model.Block) error {
+func (r *RepositoryEnt) AddBlock(ctx context.Context, block *model.Block) (bool, error) {
 	// Convert model.Block to ent.Block
 	// Use the ent client to create the block in the database
 	_, err := r.client.Block.Create().
@@ -85,11 +86,12 @@ func (r *RepositoryEnt) AddBlock(ctx context.Context, block *model.Block) error 
 
 	if ent.IsConstraintError(err) {
 		// If the block already exists, we can ignore the error
+		return true, nil
 	} else if err != nil {
-		return r.logger.Errorf("failed to add block: %v", err)
+		return false, r.logger.Errorf("failed to add block: %v", err)
 	}
 
-	return nil
+	return false, nil
 }
 
 // AddBlocks implements Repository.
@@ -321,21 +323,27 @@ func (r *RepositoryEnt) IncrementAccountBalance(ctx context.Context, address str
 		}
 		return r.logger.Errorf("failed to increment account balance for %s: %v", address, err)
 	}
-	r.logger.Infof("Incremented account balance for %s by %d", address, amount)
 
 	return nil
 }
 
 // AddTransfer implements Repository.
-func (r *RepositoryEnt) AddTransfer(ctx context.Context, transfer *model.Transfer) error {
-	_, err := r.client.Transfer.Create().
-		SetFromAddress(transfer.FromAddress).
-		SetToAddress(transfer.ToAddress).
+func (r *RepositoryEnt) AddTransfer(ctx context.Context, tx *model.Transaction, transfer *model.Transfer) error {
+	createTransfer := r.client.Transfer.Create().
+		SetHash(tx.Hash).
+		SetFunc(strings.ToLower(transfer.Func)).
 		SetToken(transfer.Token).
 		SetAmount(transfer.Amount).
 		SetDenom(transfer.Denom).
-		SetCreatedAt(time.Now()).
-		Save(ctx)
+		SetCreatedAt(time.Now())
+
+	if transfer.FromAddress != "" {
+		createTransfer = createTransfer.SetFromAddress(transfer.FromAddress)
+	}
+	if transfer.ToAddress != "" {
+		createTransfer = createTransfer.SetToAddress(transfer.ToAddress)
+	}
+	_, err := createTransfer.Save(ctx)
 	if err != nil {
 		return r.logger.Errorf("failed to add transfer from %s to %s: %v", transfer.FromAddress, transfer.ToAddress, err)
 	}
@@ -344,22 +352,28 @@ func (r *RepositoryEnt) AddTransfer(ctx context.Context, transfer *model.Transfe
 }
 
 // AddTransfers implements Repository.
-func (r *RepositoryEnt) AddTransfers(ctx context.Context, transfers []model.Transfer) error {
+func (r *RepositoryEnt) AddTransfers(ctx context.Context, tx *model.Transaction, transfers []model.Transfer) error {
 	_, err := r.client.Transfer.CreateBulk(
 		func() []*ent.TransferCreate {
 			bulk := make([]*ent.TransferCreate, len(transfers))
 			for i, transfer := range transfers {
 				bulk[i] = r.client.Transfer.Create().
-					SetFromAddress(transfer.FromAddress).
-					SetToAddress(transfer.ToAddress).
+					SetHash(tx.Hash).
+					SetFunc(strings.ToLower(transfer.Func)).
 					SetToken(transfer.Token).
 					SetAmount(transfer.Amount).
 					SetDenom(transfer.Denom).
 					SetCreatedAt(time.Now())
+
+				if transfer.FromAddress != "" {
+					bulk[i].SetFromAddress(transfer.FromAddress)
+				}
+				if transfer.ToAddress != "" {
+					bulk[i].SetToAddress(transfer.ToAddress)
+				}
 			}
 			return bulk
-		}()...).
-		Save(ctx)
+		}()...).Save(ctx)
 	if err != nil {
 		return r.logger.Errorf("failed to add transfers: %v", err)
 	}

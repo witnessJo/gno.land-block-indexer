@@ -14,7 +14,8 @@ import (
 )
 
 const (
-	topicBlockWithTransactions = "block_with_txs"
+	TOPIC_BLOCK_WITH_TXS = "block_with_txs"
+	UNIT_NAME            = "ugnot" // The unit name for the token, can be changed as needed
 )
 
 type Service interface {
@@ -65,7 +66,7 @@ func (s *service) SubscribeAndHandle(ctx context.Context) error {
 	}
 
 	// Subscribe to the topic
-	err := s.msgBroker.Subscribe(topicBlockWithTransactions, func(message []byte) error {
+	err := s.msgBroker.Subscribe(TOPIC_BLOCK_WITH_TXS, func(message []byte) error {
 		// Unmarshal the message into BlockWithTransactions struct
 		var blockWithTxs msgbroker.BlockWithTransactions
 		err := json.Unmarshal(message, &blockWithTxs)
@@ -87,9 +88,9 @@ func (s *service) SubscribeAndHandle(ctx context.Context) error {
 
 	// Check for errors in subscription
 	if err != nil {
-		return s.logger.Errorf("Failed to subscribe to topic %s: %v", topicBlockWithTransactions, err)
+		return s.logger.Errorf("Failed to subscribe to topic %s: %v", TOPIC_BLOCK_WITH_TXS, err)
 	}
-	s.logger.Infof("Subscribed to topic %s successfully", topicBlockWithTransactions)
+	s.logger.Infof("Subscribed to topic %s successfully", TOPIC_BLOCK_WITH_TXS)
 
 	// Keep running until context is cancelled
 	<-ctx.Done()
@@ -123,9 +124,13 @@ func (s *service) messageWorker(ctx context.Context, workCh <-chan msgbroker.Blo
 
 // processBlockWithTransactions handles the actual message processing
 func (s *service) ProcessBlockWithTransactions(ctx context.Context, blockWithTxs msgbroker.BlockWithTransactions) error {
-	err := s.repo.AddBlock(ctx, blockWithTxs.Block)
+	exists, err := s.repo.AddBlock(ctx, blockWithTxs.Block)
 	if err != nil {
 		return s.logger.Errorf("failed to add block %d: %w", blockWithTxs.Block.Height, err)
+	}
+	if exists {
+		s.logger.Debugf("Block %d already exists, skipping", blockWithTxs.Block.Height)
+		return nil
 	}
 
 	err = s.repo.AddTransactions(ctx, blockWithTxs.Block.Height, blockWithTxs.Transactions)
@@ -148,6 +153,7 @@ func (s *service) parseAndProcessTransactions(ctx context.Context, transactions 
 	var err error
 
 	for _, tx := range transactions {
+		transfers := make([]model.Transfer, 0)
 		for _, event := range tx.Response.Events {
 			if strings.ToLower(event.Type) == "transfer" {
 				var fromAddress, toAddress string
@@ -182,7 +188,23 @@ func (s *service) parseAndProcessTransactions(ctx context.Context, transactions 
 				default:
 					s.logger.Warnf("Unknown event type %s in transaction %s", event.Type, tx.Hash)
 				}
+
+				transfers = append(transfers, model.Transfer{
+					FromAddress: fromAddress,
+					ToAddress:   toAddress,
+					Token:       event.PkgPath,
+					CreatedAt:   time.Now(),
+					Amount:      float64(numValue),
+					Denom:       UNIT_NAME,
+					Func:        event.Func,
+				})
 			}
+		}
+
+		s.logger.Debugf("😀 Transfer count for transaction %s: %d", tx.Hash, len(transfers))
+		err := s.repo.AddTransfers(ctx, &tx, transfers)
+		if err != nil {
+			return s.logger.Errorf("Failed to add transfers for transaction %s: %v", tx.Hash, err)
 		}
 	}
 
@@ -218,7 +240,6 @@ func (s *service) handleMintEvent(ctx context.Context, tx *model.Transaction, pk
 		return s.logger.Errorf("Failed to increment balance for account %s: %v", toAddress, err)
 	}
 
-	s.logger.Infof("Successfully handled mint event: %d tokens minted to %s for transaction %s", value, toAddress, tx.Hash)
 	return nil
 }
 
@@ -252,7 +273,6 @@ func (s *service) handleBurnEvent(ctx context.Context, tx *model.Transaction, pk
 		return s.logger.Errorf("Failed to decrement balance for account %s: %v", fromAddress, err)
 	}
 
-	s.logger.Infof("Successfully handled burn event: %d tokens burned from %s for transaction %s", value, fromAddress, tx.Hash)
 	return nil
 }
 
@@ -286,21 +306,6 @@ func (s *service) handleTransferEvent(ctx context.Context, tx *model.Transaction
 			return s.logger.Errorf("Failed to add account %s: %v", toAddress, err)
 		}
 	}
-
-	// Example: Update account balances in repository
-	if err := s.repo.AddTransfer(ctx, &model.Transfer{
-		FromAddress: fromAddress,
-		ToAddress:   toAddress,
-		Token:       pkg,
-		Amount:      float64(value),
-		Denom:       "ugnot",
-		CreatedAt:   time.Now(),
-	}); err != nil {
-		return s.logger.Errorf("Failed to add transfer for transaction %s: %v", tx.Hash, err)
-	}
-	s.logger.Infof("Successfully handled transfer event for transaction %s", tx.Hash)
-
-	// Update account balances
 
 	if err := s.repo.IncrementAccountBalance(ctx, fromAddress, pkg, -(value)); err != nil {
 		return s.logger.Errorf("Failed to decrement balance for account %s: %v", fromAddress, err)

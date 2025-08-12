@@ -52,28 +52,28 @@ func init() {
 	transaction.DefaultCreatedAt = transactionDescCreatedAt.Default.(time.Time)
 	transferFields := schema.Transfer{}.Fields()
 	_ = transferFields
-	// transferDescFromAddress is the schema descriptor for from_address field.
-	transferDescFromAddress := transferFields[1].Descriptor()
-	// transfer.FromAddressValidator is a validator for the "from_address" field. It is called by the builders before save.
-	transfer.FromAddressValidator = transferDescFromAddress.Validators[0].(func(string) error)
-	// transferDescToAddress is the schema descriptor for to_address field.
-	transferDescToAddress := transferFields[2].Descriptor()
-	// transfer.ToAddressValidator is a validator for the "to_address" field. It is called by the builders before save.
-	transfer.ToAddressValidator = transferDescToAddress.Validators[0].(func(string) error)
+	// transferDescHash is the schema descriptor for hash field.
+	transferDescHash := transferFields[1].Descriptor()
+	// transfer.HashValidator is a validator for the "hash" field. It is called by the builders before save.
+	transfer.HashValidator = transferDescHash.Validators[0].(func(string) error)
+	// transferDescFunc is the schema descriptor for func field.
+	transferDescFunc := transferFields[2].Descriptor()
+	// transfer.FuncValidator is a validator for the "func" field. It is called by the builders before save.
+	transfer.FuncValidator = transferDescFunc.Validators[0].(func(string) error)
 	// transferDescToken is the schema descriptor for token field.
-	transferDescToken := transferFields[3].Descriptor()
+	transferDescToken := transferFields[5].Descriptor()
 	// transfer.TokenValidator is a validator for the "token" field. It is called by the builders before save.
 	transfer.TokenValidator = transferDescToken.Validators[0].(func(string) error)
 	// transferDescAmount is the schema descriptor for amount field.
-	transferDescAmount := transferFields[4].Descriptor()
+	transferDescAmount := transferFields[6].Descriptor()
 	// transfer.AmountValidator is a validator for the "amount" field. It is called by the builders before save.
 	transfer.AmountValidator = transferDescAmount.Validators[0].(func(float64) error)
 	// transferDescDenom is the schema descriptor for denom field.
-	transferDescDenom := transferFields[5].Descriptor()
+	transferDescDenom := transferFields[7].Descriptor()
 	// transfer.DenomValidator is a validator for the "denom" field. It is called by the builders before save.
 	transfer.DenomValidator = transferDescDenom.Validators[0].(func(string) error)
 	// transferDescCreatedAt is the schema descriptor for created_at field.
-	transferDescCreatedAt := transferFields[6].Descriptor()
+	transferDescCreatedAt := transferFields[8].Descriptor()
 	// transfer.DefaultCreatedAt holds the default value on creation for the created_at field.
 	transfer.DefaultCreatedAt = transferDescCreatedAt.Default.(func() time.Time)
 }

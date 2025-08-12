@@ -11,7 +11,6 @@ import (
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
-	"gno.land-block-indexer/ent/account"
 	"gno.land-block-indexer/ent/transfer"
 )
 
@@ -23,15 +22,43 @@ type TransferCreate struct {
 	conflict []sql.ConflictOption
 }
 
+// SetHash sets the "hash" field.
+func (_c *TransferCreate) SetHash(v string) *TransferCreate {
+	_c.mutation.SetHash(v)
+	return _c
+}
+
+// SetFunc sets the "func" field.
+func (_c *TransferCreate) SetFunc(v string) *TransferCreate {
+	_c.mutation.SetFunc(v)
+	return _c
+}
+
 // SetFromAddress sets the "from_address" field.
 func (_c *TransferCreate) SetFromAddress(v string) *TransferCreate {
 	_c.mutation.SetFromAddress(v)
 	return _c
 }
 
+// SetNillableFromAddress sets the "from_address" field if the given value is not nil.
+func (_c *TransferCreate) SetNillableFromAddress(v *string) *TransferCreate {
+	if v != nil {
+		_c.SetFromAddress(*v)
+	}
+	return _c
+}
+
 // SetToAddress sets the "to_address" field.
 func (_c *TransferCreate) SetToAddress(v string) *TransferCreate {
 	_c.mutation.SetToAddress(v)
+	return _c
+}
+
+// SetNillableToAddress sets the "to_address" field if the given value is not nil.
+func (_c *TransferCreate) SetNillableToAddress(v *string) *TransferCreate {
+	if v != nil {
+		_c.SetToAddress(*v)
+	}
 	return _c
 }
 
@@ -71,25 +98,6 @@ func (_c *TransferCreate) SetNillableCreatedAt(v *time.Time) *TransferCreate {
 func (_c *TransferCreate) SetID(v int) *TransferCreate {
 	_c.mutation.SetID(v)
 	return _c
-}
-
-// SetAccountID sets the "account" edge to the Account entity by ID.
-func (_c *TransferCreate) SetAccountID(id string) *TransferCreate {
-	_c.mutation.SetAccountID(id)
-	return _c
-}
-
-// SetNillableAccountID sets the "account" edge to the Account entity by ID if the given value is not nil.
-func (_c *TransferCreate) SetNillableAccountID(id *string) *TransferCreate {
-	if id != nil {
-		_c = _c.SetAccountID(*id)
-	}
-	return _c
-}
-
-// SetAccount sets the "account" edge to the Account entity.
-func (_c *TransferCreate) SetAccount(v *Account) *TransferCreate {
-	return _c.SetAccountID(v.ID)
 }
 
 // Mutation returns the TransferMutation object of the builder.
@@ -135,20 +143,20 @@ func (_c *TransferCreate) defaults() {
 
 // check runs all checks and user-defined validators on the builder.
 func (_c *TransferCreate) check() error {
-	if _, ok := _c.mutation.FromAddress(); !ok {
-		return &ValidationError{Name: "from_address", err: errors.New(`ent: missing required field "Transfer.from_address"`)}
+	if _, ok := _c.mutation.Hash(); !ok {
+		return &ValidationError{Name: "hash", err: errors.New(`ent: missing required field "Transfer.hash"`)}
 	}
-	if v, ok := _c.mutation.FromAddress(); ok {
-		if err := transfer.FromAddressValidator(v); err != nil {
-			return &ValidationError{Name: "from_address", err: fmt.Errorf(`ent: validator failed for field "Transfer.from_address": %w`, err)}
+	if v, ok := _c.mutation.Hash(); ok {
+		if err := transfer.HashValidator(v); err != nil {
+			return &ValidationError{Name: "hash", err: fmt.Errorf(`ent: validator failed for field "Transfer.hash": %w`, err)}
 		}
 	}
-	if _, ok := _c.mutation.ToAddress(); !ok {
-		return &ValidationError{Name: "to_address", err: errors.New(`ent: missing required field "Transfer.to_address"`)}
+	if _, ok := _c.mutation.Func(); !ok {
+		return &ValidationError{Name: "func", err: errors.New(`ent: missing required field "Transfer.func"`)}
 	}
-	if v, ok := _c.mutation.ToAddress(); ok {
-		if err := transfer.ToAddressValidator(v); err != nil {
-			return &ValidationError{Name: "to_address", err: fmt.Errorf(`ent: validator failed for field "Transfer.to_address": %w`, err)}
+	if v, ok := _c.mutation.Func(); ok {
+		if err := transfer.FuncValidator(v); err != nil {
+			return &ValidationError{Name: "func", err: fmt.Errorf(`ent: validator failed for field "Transfer.func": %w`, err)}
 		}
 	}
 	if _, ok := _c.mutation.Token(); !ok {
@@ -211,6 +219,14 @@ func (_c *TransferCreate) createSpec() (*Transfer, *sqlgraph.CreateSpec) {
 		_node.ID = id
 		_spec.ID.Value = id
 	}
+	if value, ok := _c.mutation.Hash(); ok {
+		_spec.SetField(transfer.FieldHash, field.TypeString, value)
+		_node.Hash = value
+	}
+	if value, ok := _c.mutation.Func(); ok {
+		_spec.SetField(transfer.FieldFunc, field.TypeString, value)
+		_node.Func = value
+	}
 	if value, ok := _c.mutation.FromAddress(); ok {
 		_spec.SetField(transfer.FieldFromAddress, field.TypeString, value)
 		_node.FromAddress = value
@@ -235,23 +251,6 @@ func (_c *TransferCreate) createSpec() (*Transfer, *sqlgraph.CreateSpec) {
 		_spec.SetField(transfer.FieldCreatedAt, field.TypeTime, value)
 		_node.CreatedAt = value
 	}
-	if nodes := _c.mutation.AccountIDs(); len(nodes) > 0 {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.M2O,
-			Inverse: true,
-			Table:   transfer.AccountTable,
-			Columns: []string{transfer.AccountColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(account.FieldID, field.TypeString),
-			},
-		}
-		for _, k := range nodes {
-			edge.Target.Nodes = append(edge.Target.Nodes, k)
-		}
-		_node.account_transfers = &nodes[0]
-		_spec.Edges = append(_spec.Edges, edge)
-	}
 	return _node, _spec
 }
 
@@ -259,7 +258,7 @@ func (_c *TransferCreate) createSpec() (*Transfer, *sqlgraph.CreateSpec) {
 // of the `INSERT` statement. For example:
 //
 //	client.Transfer.Create().
-//		SetFromAddress(v).
+//		SetHash(v).
 //		OnConflict(
 //			// Update the row with the new values
 //			// the was proposed for insertion.
@@ -268,7 +267,7 @@ func (_c *TransferCreate) createSpec() (*Transfer, *sqlgraph.CreateSpec) {
 //		// Override some of the fields with custom
 //		// update values.
 //		Update(func(u *ent.TransferUpsert) {
-//			SetFromAddress(v+v).
+//			SetHash(v+v).
 //		}).
 //		Exec(ctx)
 func (_c *TransferCreate) OnConflict(opts ...sql.ConflictOption) *TransferUpsertOne {
@@ -304,6 +303,30 @@ type (
 	}
 )
 
+// SetHash sets the "hash" field.
+func (u *TransferUpsert) SetHash(v string) *TransferUpsert {
+	u.Set(transfer.FieldHash, v)
+	return u
+}
+
+// UpdateHash sets the "hash" field to the value that was provided on create.
+func (u *TransferUpsert) UpdateHash() *TransferUpsert {
+	u.SetExcluded(transfer.FieldHash)
+	return u
+}
+
+// SetFunc sets the "func" field.
+func (u *TransferUpsert) SetFunc(v string) *TransferUpsert {
+	u.Set(transfer.FieldFunc, v)
+	return u
+}
+
+// UpdateFunc sets the "func" field to the value that was provided on create.
+func (u *TransferUpsert) UpdateFunc() *TransferUpsert {
+	u.SetExcluded(transfer.FieldFunc)
+	return u
+}
+
 // SetFromAddress sets the "from_address" field.
 func (u *TransferUpsert) SetFromAddress(v string) *TransferUpsert {
 	u.Set(transfer.FieldFromAddress, v)
@@ -316,6 +339,12 @@ func (u *TransferUpsert) UpdateFromAddress() *TransferUpsert {
 	return u
 }
 
+// ClearFromAddress clears the value of the "from_address" field.
+func (u *TransferUpsert) ClearFromAddress() *TransferUpsert {
+	u.SetNull(transfer.FieldFromAddress)
+	return u
+}
+
 // SetToAddress sets the "to_address" field.
 func (u *TransferUpsert) SetToAddress(v string) *TransferUpsert {
 	u.Set(transfer.FieldToAddress, v)
@@ -325,6 +354,12 @@ func (u *TransferUpsert) SetToAddress(v string) *TransferUpsert {
 // UpdateToAddress sets the "to_address" field to the value that was provided on create.
 func (u *TransferUpsert) UpdateToAddress() *TransferUpsert {
 	u.SetExcluded(transfer.FieldToAddress)
+	return u
+}
+
+// ClearToAddress clears the value of the "to_address" field.
+func (u *TransferUpsert) ClearToAddress() *TransferUpsert {
+	u.SetNull(transfer.FieldToAddress)
 	return u
 }
 
@@ -421,6 +456,34 @@ func (u *TransferUpsertOne) Update(set func(*TransferUpsert)) *TransferUpsertOne
 	return u
 }
 
+// SetHash sets the "hash" field.
+func (u *TransferUpsertOne) SetHash(v string) *TransferUpsertOne {
+	return u.Update(func(s *TransferUpsert) {
+		s.SetHash(v)
+	})
+}
+
+// UpdateHash sets the "hash" field to the value that was provided on create.
+func (u *TransferUpsertOne) UpdateHash() *TransferUpsertOne {
+	return u.Update(func(s *TransferUpsert) {
+		s.UpdateHash()
+	})
+}
+
+// SetFunc sets the "func" field.
+func (u *TransferUpsertOne) SetFunc(v string) *TransferUpsertOne {
+	return u.Update(func(s *TransferUpsert) {
+		s.SetFunc(v)
+	})
+}
+
+// UpdateFunc sets the "func" field to the value that was provided on create.
+func (u *TransferUpsertOne) UpdateFunc() *TransferUpsertOne {
+	return u.Update(func(s *TransferUpsert) {
+		s.UpdateFunc()
+	})
+}
+
 // SetFromAddress sets the "from_address" field.
 func (u *TransferUpsertOne) SetFromAddress(v string) *TransferUpsertOne {
 	return u.Update(func(s *TransferUpsert) {
@@ -435,6 +498,13 @@ func (u *TransferUpsertOne) UpdateFromAddress() *TransferUpsertOne {
 	})
 }
 
+// ClearFromAddress clears the value of the "from_address" field.
+func (u *TransferUpsertOne) ClearFromAddress() *TransferUpsertOne {
+	return u.Update(func(s *TransferUpsert) {
+		s.ClearFromAddress()
+	})
+}
+
 // SetToAddress sets the "to_address" field.
 func (u *TransferUpsertOne) SetToAddress(v string) *TransferUpsertOne {
 	return u.Update(func(s *TransferUpsert) {
@@ -446,6 +516,13 @@ func (u *TransferUpsertOne) SetToAddress(v string) *TransferUpsertOne {
 func (u *TransferUpsertOne) UpdateToAddress() *TransferUpsertOne {
 	return u.Update(func(s *TransferUpsert) {
 		s.UpdateToAddress()
+	})
+}
+
+// ClearToAddress clears the value of the "to_address" field.
+func (u *TransferUpsertOne) ClearToAddress() *TransferUpsertOne {
+	return u.Update(func(s *TransferUpsert) {
+		s.ClearToAddress()
 	})
 }
 
@@ -633,7 +710,7 @@ func (_c *TransferCreateBulk) ExecX(ctx context.Context) {
 //		// Override some of the fields with custom
 //		// update values.
 //		Update(func(u *ent.TransferUpsert) {
-//			SetFromAddress(v+v).
+//			SetHash(v+v).
 //		}).
 //		Exec(ctx)
 func (_c *TransferCreateBulk) OnConflict(opts ...sql.ConflictOption) *TransferUpsertBulk {
@@ -715,6 +792,34 @@ func (u *TransferUpsertBulk) Update(set func(*TransferUpsert)) *TransferUpsertBu
 	return u
 }
 
+// SetHash sets the "hash" field.
+func (u *TransferUpsertBulk) SetHash(v string) *TransferUpsertBulk {
+	return u.Update(func(s *TransferUpsert) {
+		s.SetHash(v)
+	})
+}
+
+// UpdateHash sets the "hash" field to the value that was provided on create.
+func (u *TransferUpsertBulk) UpdateHash() *TransferUpsertBulk {
+	return u.Update(func(s *TransferUpsert) {
+		s.UpdateHash()
+	})
+}
+
+// SetFunc sets the "func" field.
+func (u *TransferUpsertBulk) SetFunc(v string) *TransferUpsertBulk {
+	return u.Update(func(s *TransferUpsert) {
+		s.SetFunc(v)
+	})
+}
+
+// UpdateFunc sets the "func" field to the value that was provided on create.
+func (u *TransferUpsertBulk) UpdateFunc() *TransferUpsertBulk {
+	return u.Update(func(s *TransferUpsert) {
+		s.UpdateFunc()
+	})
+}
+
 // SetFromAddress sets the "from_address" field.
 func (u *TransferUpsertBulk) SetFromAddress(v string) *TransferUpsertBulk {
 	return u.Update(func(s *TransferUpsert) {
@@ -729,6 +834,13 @@ func (u *TransferUpsertBulk) UpdateFromAddress() *TransferUpsertBulk {
 	})
 }
 
+// ClearFromAddress clears the value of the "from_address" field.
+func (u *TransferUpsertBulk) ClearFromAddress() *TransferUpsertBulk {
+	return u.Update(func(s *TransferUpsert) {
+		s.ClearFromAddress()
+	})
+}
+
 // SetToAddress sets the "to_address" field.
 func (u *TransferUpsertBulk) SetToAddress(v string) *TransferUpsertBulk {
 	return u.Update(func(s *TransferUpsert) {
@@ -740,6 +852,13 @@ func (u *TransferUpsertBulk) SetToAddress(v string) *TransferUpsertBulk {
 func (u *TransferUpsertBulk) UpdateToAddress() *TransferUpsertBulk {
 	return u.Update(func(s *TransferUpsert) {
 		s.UpdateToAddress()
+	})
+}
+
+// ClearToAddress clears the value of the "to_address" field.
+func (u *TransferUpsertBulk) ClearToAddress() *TransferUpsertBulk {
+	return u.Update(func(s *TransferUpsert) {
+		s.ClearToAddress()
 	})
 }
 

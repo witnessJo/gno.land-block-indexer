@@ -29,20 +29,31 @@ type Account struct {
 
 // AccountEdges holds the relations/edges for other nodes in the graph.
 type AccountEdges struct {
-	// Transfers holds the value of the transfers edge.
-	Transfers []*Transfer `json:"transfers,omitempty"`
+	// TransfersTo holds the value of the transfers_to edge.
+	TransfersTo []*Transfer `json:"transfers_to,omitempty"`
+	// TransfersFrom holds the value of the transfers_from edge.
+	TransfersFrom []*Transfer `json:"transfers_from,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
-	loadedTypes [1]bool
+	loadedTypes [2]bool
 }
 
-// TransfersOrErr returns the Transfers value or an error if the edge
+// TransfersToOrErr returns the TransfersTo value or an error if the edge
 // was not loaded in eager-loading.
-func (e AccountEdges) TransfersOrErr() ([]*Transfer, error) {
+func (e AccountEdges) TransfersToOrErr() ([]*Transfer, error) {
 	if e.loadedTypes[0] {
-		return e.Transfers, nil
+		return e.TransfersTo, nil
 	}
-	return nil, &NotLoadedError{edge: "transfers"}
+	return nil, &NotLoadedError{edge: "transfers_to"}
+}
+
+// TransfersFromOrErr returns the TransfersFrom value or an error if the edge
+// was not loaded in eager-loading.
+func (e AccountEdges) TransfersFromOrErr() ([]*Transfer, error) {
+	if e.loadedTypes[1] {
+		return e.TransfersFrom, nil
+	}
+	return nil, &NotLoadedError{edge: "transfers_from"}
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
@@ -100,9 +111,14 @@ func (_m *Account) Value(name string) (ent.Value, error) {
 	return _m.selectValues.Get(name)
 }
 
-// QueryTransfers queries the "transfers" edge of the Account entity.
-func (_m *Account) QueryTransfers() *TransferQuery {
-	return NewAccountClient(_m.config).QueryTransfers(_m)
+// QueryTransfersTo queries the "transfers_to" edge of the Account entity.
+func (_m *Account) QueryTransfersTo() *TransferQuery {
+	return NewAccountClient(_m.config).QueryTransfersTo(_m)
+}
+
+// QueryTransfersFrom queries the "transfers_from" edge of the Account entity.
+func (_m *Account) QueryTransfersFrom() *TransferQuery {
+	return NewAccountClient(_m.config).QueryTransfersFrom(_m)
 }
 
 // Update returns a builder for updating this Account.

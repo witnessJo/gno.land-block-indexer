@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"entgo.io/ent/dialect/sql"
-	"entgo.io/ent/dialect/sql/sqlgraph"
 	"gno.land-block-indexer/ent/predicate"
 )
 
@@ -55,6 +54,16 @@ func IDLTE(id int) predicate.Transfer {
 	return predicate.Transfer(sql.FieldLTE(FieldID, id))
 }
 
+// Hash applies equality check predicate on the "hash" field. It's identical to HashEQ.
+func Hash(v string) predicate.Transfer {
+	return predicate.Transfer(sql.FieldEQ(FieldHash, v))
+}
+
+// Func applies equality check predicate on the "func" field. It's identical to FuncEQ.
+func Func(v string) predicate.Transfer {
+	return predicate.Transfer(sql.FieldEQ(FieldFunc, v))
+}
+
 // FromAddress applies equality check predicate on the "from_address" field. It's identical to FromAddressEQ.
 func FromAddress(v string) predicate.Transfer {
 	return predicate.Transfer(sql.FieldEQ(FieldFromAddress, v))
@@ -83,6 +92,136 @@ func Denom(v string) predicate.Transfer {
 // CreatedAt applies equality check predicate on the "created_at" field. It's identical to CreatedAtEQ.
 func CreatedAt(v time.Time) predicate.Transfer {
 	return predicate.Transfer(sql.FieldEQ(FieldCreatedAt, v))
+}
+
+// HashEQ applies the EQ predicate on the "hash" field.
+func HashEQ(v string) predicate.Transfer {
+	return predicate.Transfer(sql.FieldEQ(FieldHash, v))
+}
+
+// HashNEQ applies the NEQ predicate on the "hash" field.
+func HashNEQ(v string) predicate.Transfer {
+	return predicate.Transfer(sql.FieldNEQ(FieldHash, v))
+}
+
+// HashIn applies the In predicate on the "hash" field.
+func HashIn(vs ...string) predicate.Transfer {
+	return predicate.Transfer(sql.FieldIn(FieldHash, vs...))
+}
+
+// HashNotIn applies the NotIn predicate on the "hash" field.
+func HashNotIn(vs ...string) predicate.Transfer {
+	return predicate.Transfer(sql.FieldNotIn(FieldHash, vs...))
+}
+
+// HashGT applies the GT predicate on the "hash" field.
+func HashGT(v string) predicate.Transfer {
+	return predicate.Transfer(sql.FieldGT(FieldHash, v))
+}
+
+// HashGTE applies the GTE predicate on the "hash" field.
+func HashGTE(v string) predicate.Transfer {
+	return predicate.Transfer(sql.FieldGTE(FieldHash, v))
+}
+
+// HashLT applies the LT predicate on the "hash" field.
+func HashLT(v string) predicate.Transfer {
+	return predicate.Transfer(sql.FieldLT(FieldHash, v))
+}
+
+// HashLTE applies the LTE predicate on the "hash" field.
+func HashLTE(v string) predicate.Transfer {
+	return predicate.Transfer(sql.FieldLTE(FieldHash, v))
+}
+
+// HashContains applies the Contains predicate on the "hash" field.
+func HashContains(v string) predicate.Transfer {
+	return predicate.Transfer(sql.FieldContains(FieldHash, v))
+}
+
+// HashHasPrefix applies the HasPrefix predicate on the "hash" field.
+func HashHasPrefix(v string) predicate.Transfer {
+	return predicate.Transfer(sql.FieldHasPrefix(FieldHash, v))
+}
+
+// HashHasSuffix applies the HasSuffix predicate on the "hash" field.
+func HashHasSuffix(v string) predicate.Transfer {
+	return predicate.Transfer(sql.FieldHasSuffix(FieldHash, v))
+}
+
+// HashEqualFold applies the EqualFold predicate on the "hash" field.
+func HashEqualFold(v string) predicate.Transfer {
+	return predicate.Transfer(sql.FieldEqualFold(FieldHash, v))
+}
+
+// HashContainsFold applies the ContainsFold predicate on the "hash" field.
+func HashContainsFold(v string) predicate.Transfer {
+	return predicate.Transfer(sql.FieldContainsFold(FieldHash, v))
+}
+
+// FuncEQ applies the EQ predicate on the "func" field.
+func FuncEQ(v string) predicate.Transfer {
+	return predicate.Transfer(sql.FieldEQ(FieldFunc, v))
+}
+
+// FuncNEQ applies the NEQ predicate on the "func" field.
+func FuncNEQ(v string) predicate.Transfer {
+	return predicate.Transfer(sql.FieldNEQ(FieldFunc, v))
+}
+
+// FuncIn applies the In predicate on the "func" field.
+func FuncIn(vs ...string) predicate.Transfer {
+	return predicate.Transfer(sql.FieldIn(FieldFunc, vs...))
+}
+
+// FuncNotIn applies the NotIn predicate on the "func" field.
+func FuncNotIn(vs ...string) predicate.Transfer {
+	return predicate.Transfer(sql.FieldNotIn(FieldFunc, vs...))
+}
+
+// FuncGT applies the GT predicate on the "func" field.
+func FuncGT(v string) predicate.Transfer {
+	return predicate.Transfer(sql.FieldGT(FieldFunc, v))
+}
+
+// FuncGTE applies the GTE predicate on the "func" field.
+func FuncGTE(v string) predicate.Transfer {
+	return predicate.Transfer(sql.FieldGTE(FieldFunc, v))
+}
+
+// FuncLT applies the LT predicate on the "func" field.
+func FuncLT(v string) predicate.Transfer {
+	return predicate.Transfer(sql.FieldLT(FieldFunc, v))
+}
+
+// FuncLTE applies the LTE predicate on the "func" field.
+func FuncLTE(v string) predicate.Transfer {
+	return predicate.Transfer(sql.FieldLTE(FieldFunc, v))
+}
+
+// FuncContains applies the Contains predicate on the "func" field.
+func FuncContains(v string) predicate.Transfer {
+	return predicate.Transfer(sql.FieldContains(FieldFunc, v))
+}
+
+// FuncHasPrefix applies the HasPrefix predicate on the "func" field.
+func FuncHasPrefix(v string) predicate.Transfer {
+	return predicate.Transfer(sql.FieldHasPrefix(FieldFunc, v))
+}
+
+// FuncHasSuffix applies the HasSuffix predicate on the "func" field.
+func FuncHasSuffix(v string) predicate.Transfer {
+	return predicate.Transfer(sql.FieldHasSuffix(FieldFunc, v))
+}
+
+// FuncEqualFold applies the EqualFold predicate on the "func" field.
+func FuncEqualFold(v string) predicate.Transfer {
+	return predicate.Transfer(sql.FieldEqualFold(FieldFunc, v))
+}
+
+// FuncContainsFold applies the ContainsFold predicate on the "func" field.
+func FuncContainsFold(v string) predicate.Transfer {
+	return predicate.Transfer(sql.FieldContainsFold(FieldFunc, v))
 }
 
 // FromAddressEQ applies the EQ predicate on the "from_address" field.
@@ -138,6 +277,16 @@ func FromAddressHasPrefix(v string) predicate.Transfer {
 // FromAddressHasSuffix applies the HasSuffix predicate on the "from_address" field.
 func FromAddressHasSuffix(v string) predicate.Transfer {
 	return predicate.Transfer(sql.FieldHasSuffix(FieldFromAddress, v))
+}
+
+// FromAddressIsNil applies the IsNil predicate on the "from_address" field.
+func FromAddressIsNil() predicate.Transfer {
+	return predicate.Transfer(sql.FieldIsNull(FieldFromAddress))
+}
+
+// FromAddressNotNil applies the NotNil predicate on the "from_address" field.
+func FromAddressNotNil() predicate.Transfer {
+	return predicate.Transfer(sql.FieldNotNull(FieldFromAddress))
 }
 
 // FromAddressEqualFold applies the EqualFold predicate on the "from_address" field.
@@ -203,6 +352,16 @@ func ToAddressHasPrefix(v string) predicate.Transfer {
 // ToAddressHasSuffix applies the HasSuffix predicate on the "to_address" field.
 func ToAddressHasSuffix(v string) predicate.Transfer {
 	return predicate.Transfer(sql.FieldHasSuffix(FieldToAddress, v))
+}
+
+// ToAddressIsNil applies the IsNil predicate on the "to_address" field.
+func ToAddressIsNil() predicate.Transfer {
+	return predicate.Transfer(sql.FieldIsNull(FieldToAddress))
+}
+
+// ToAddressNotNil applies the NotNil predicate on the "to_address" field.
+func ToAddressNotNil() predicate.Transfer {
+	return predicate.Transfer(sql.FieldNotNull(FieldToAddress))
 }
 
 // ToAddressEqualFold applies the EqualFold predicate on the "to_address" field.
@@ -423,29 +582,6 @@ func CreatedAtLT(v time.Time) predicate.Transfer {
 // CreatedAtLTE applies the LTE predicate on the "created_at" field.
 func CreatedAtLTE(v time.Time) predicate.Transfer {
 	return predicate.Transfer(sql.FieldLTE(FieldCreatedAt, v))
-}
-
-// HasAccount applies the HasEdge predicate on the "account" edge.
-func HasAccount() predicate.Transfer {
-	return predicate.Transfer(func(s *sql.Selector) {
-		step := sqlgraph.NewStep(
-			sqlgraph.From(Table, FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, true, AccountTable, AccountColumn),
-		)
-		sqlgraph.HasNeighbors(s, step)
-	})
-}
-
-// HasAccountWith applies the HasEdge predicate on the "account" edge with a given conditions (other predicates).
-func HasAccountWith(preds ...predicate.Account) predicate.Transfer {
-	return predicate.Transfer(func(s *sql.Selector) {
-		step := newAccountStep()
-		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
-			for _, p := range preds {
-				p(s)
-			}
-		})
-	})
 }
 
 // And groups predicates with the AND operator between them.

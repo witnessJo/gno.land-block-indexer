@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"entgo.io/ent/dialect/sql"
-	"entgo.io/ent/dialect/sql/sqlgraph"
 )
 
 const (
@@ -14,6 +13,10 @@ const (
 	Label = "transfer"
 	// FieldID holds the string denoting the id field in the database.
 	FieldID = "id"
+	// FieldHash holds the string denoting the hash field in the database.
+	FieldHash = "hash"
+	// FieldFunc holds the string denoting the func field in the database.
+	FieldFunc = "func"
 	// FieldFromAddress holds the string denoting the from_address field in the database.
 	FieldFromAddress = "from_address"
 	// FieldToAddress holds the string denoting the to_address field in the database.
@@ -26,24 +29,15 @@ const (
 	FieldDenom = "denom"
 	// FieldCreatedAt holds the string denoting the created_at field in the database.
 	FieldCreatedAt = "created_at"
-	// EdgeAccount holds the string denoting the account edge name in mutations.
-	EdgeAccount = "account"
-	// AccountFieldID holds the string denoting the ID field of the Account.
-	AccountFieldID = "address"
 	// Table holds the table name of the transfer in the database.
 	Table = "transfers"
-	// AccountTable is the table that holds the account relation/edge.
-	AccountTable = "transfers"
-	// AccountInverseTable is the table name for the Account entity.
-	// It exists in this package in order to avoid circular dependency with the "account" package.
-	AccountInverseTable = "accounts"
-	// AccountColumn is the table column denoting the account relation/edge.
-	AccountColumn = "account_transfers"
 )
 
 // Columns holds all SQL columns for transfer fields.
 var Columns = []string{
 	FieldID,
+	FieldHash,
+	FieldFunc,
 	FieldFromAddress,
 	FieldToAddress,
 	FieldToken,
@@ -55,7 +49,8 @@ var Columns = []string{
 // ForeignKeys holds the SQL foreign-keys that are owned by the "transfers"
 // table and are not defined as standalone fields in the schema.
 var ForeignKeys = []string{
-	"account_transfers",
+	"to_address",
+	"from_address",
 }
 
 // ValidColumn reports if the column name is valid (part of the table columns).
@@ -74,10 +69,10 @@ func ValidColumn(column string) bool {
 }
 
 var (
-	// FromAddressValidator is a validator for the "from_address" field. It is called by the builders before save.
-	FromAddressValidator func(string) error
-	// ToAddressValidator is a validator for the "to_address" field. It is called by the builders before save.
-	ToAddressValidator func(string) error
+	// HashValidator is a validator for the "hash" field. It is called by the builders before save.
+	HashValidator func(string) error
+	// FuncValidator is a validator for the "func" field. It is called by the builders before save.
+	FuncValidator func(string) error
 	// TokenValidator is a validator for the "token" field. It is called by the builders before save.
 	TokenValidator func(string) error
 	// AmountValidator is a validator for the "amount" field. It is called by the builders before save.
@@ -94,6 +89,16 @@ type OrderOption func(*sql.Selector)
 // ByID orders the results by the id field.
 func ByID(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldID, opts...).ToFunc()
+}
+
+// ByHash orders the results by the hash field.
+func ByHash(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldHash, opts...).ToFunc()
+}
+
+// ByFunc orders the results by the func field.
+func ByFunc(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldFunc, opts...).ToFunc()
 }
 
 // ByFromAddress orders the results by the from_address field.
@@ -124,18 +129,4 @@ func ByDenom(opts ...sql.OrderTermOption) OrderOption {
 // ByCreatedAt orders the results by the created_at field.
 func ByCreatedAt(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldCreatedAt, opts...).ToFunc()
-}
-
-// ByAccountField orders the results by account field.
-func ByAccountField(field string, opts ...sql.OrderTermOption) OrderOption {
-	return func(s *sql.Selector) {
-		sqlgraph.OrderByNeighborTerms(s, newAccountStep(), sql.OrderByField(field, opts...))
-	}
-}
-func newAccountStep() *sqlgraph.Step {
-	return sqlgraph.NewStep(
-		sqlgraph.From(Table, FieldID),
-		sqlgraph.To(AccountInverseTable, AccountFieldID),
-		sqlgraph.Edge(sqlgraph.M2O, true, AccountTable, AccountColumn),
-	)
 }

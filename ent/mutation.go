@@ -39,19 +39,22 @@ const (
 // AccountMutation represents an operation that mutates the Account nodes in the graph.
 type AccountMutation struct {
 	config
-	op               Op
-	typ              string
-	id               *string
-	token            *string
-	amount           *float64
-	addamount        *float64
-	clearedFields    map[string]struct{}
-	transfers        map[int]struct{}
-	removedtransfers map[int]struct{}
-	clearedtransfers bool
-	done             bool
-	oldValue         func(context.Context) (*Account, error)
-	predicates       []predicate.Account
+	op                    Op
+	typ                   string
+	id                    *string
+	token                 *string
+	amount                *float64
+	addamount             *float64
+	clearedFields         map[string]struct{}
+	transfers_to          map[int]struct{}
+	removedtransfers_to   map[int]struct{}
+	clearedtransfers_to   bool
+	transfers_from        map[int]struct{}
+	removedtransfers_from map[int]struct{}
+	clearedtransfers_from bool
+	done                  bool
+	oldValue              func(context.Context) (*Account, error)
+	predicates            []predicate.Account
 }
 
 var _ ent.Mutation = (*AccountMutation)(nil)
@@ -250,58 +253,112 @@ func (m *AccountMutation) ResetAmount() {
 	m.addamount = nil
 }
 
-// AddTransferIDs adds the "transfers" edge to the Transfer entity by ids.
-func (m *AccountMutation) AddTransferIDs(ids ...int) {
-	if m.transfers == nil {
-		m.transfers = make(map[int]struct{})
+// AddTransfersToIDs adds the "transfers_to" edge to the Transfer entity by ids.
+func (m *AccountMutation) AddTransfersToIDs(ids ...int) {
+	if m.transfers_to == nil {
+		m.transfers_to = make(map[int]struct{})
 	}
 	for i := range ids {
-		m.transfers[ids[i]] = struct{}{}
+		m.transfers_to[ids[i]] = struct{}{}
 	}
 }
 
-// ClearTransfers clears the "transfers" edge to the Transfer entity.
-func (m *AccountMutation) ClearTransfers() {
-	m.clearedtransfers = true
+// ClearTransfersTo clears the "transfers_to" edge to the Transfer entity.
+func (m *AccountMutation) ClearTransfersTo() {
+	m.clearedtransfers_to = true
 }
 
-// TransfersCleared reports if the "transfers" edge to the Transfer entity was cleared.
-func (m *AccountMutation) TransfersCleared() bool {
-	return m.clearedtransfers
+// TransfersToCleared reports if the "transfers_to" edge to the Transfer entity was cleared.
+func (m *AccountMutation) TransfersToCleared() bool {
+	return m.clearedtransfers_to
 }
 
-// RemoveTransferIDs removes the "transfers" edge to the Transfer entity by IDs.
-func (m *AccountMutation) RemoveTransferIDs(ids ...int) {
-	if m.removedtransfers == nil {
-		m.removedtransfers = make(map[int]struct{})
+// RemoveTransfersToIDs removes the "transfers_to" edge to the Transfer entity by IDs.
+func (m *AccountMutation) RemoveTransfersToIDs(ids ...int) {
+	if m.removedtransfers_to == nil {
+		m.removedtransfers_to = make(map[int]struct{})
 	}
 	for i := range ids {
-		delete(m.transfers, ids[i])
-		m.removedtransfers[ids[i]] = struct{}{}
+		delete(m.transfers_to, ids[i])
+		m.removedtransfers_to[ids[i]] = struct{}{}
 	}
 }
 
-// RemovedTransfers returns the removed IDs of the "transfers" edge to the Transfer entity.
-func (m *AccountMutation) RemovedTransfersIDs() (ids []int) {
-	for id := range m.removedtransfers {
+// RemovedTransfersTo returns the removed IDs of the "transfers_to" edge to the Transfer entity.
+func (m *AccountMutation) RemovedTransfersToIDs() (ids []int) {
+	for id := range m.removedtransfers_to {
 		ids = append(ids, id)
 	}
 	return
 }
 
-// TransfersIDs returns the "transfers" edge IDs in the mutation.
-func (m *AccountMutation) TransfersIDs() (ids []int) {
-	for id := range m.transfers {
+// TransfersToIDs returns the "transfers_to" edge IDs in the mutation.
+func (m *AccountMutation) TransfersToIDs() (ids []int) {
+	for id := range m.transfers_to {
 		ids = append(ids, id)
 	}
 	return
 }
 
-// ResetTransfers resets all changes to the "transfers" edge.
-func (m *AccountMutation) ResetTransfers() {
-	m.transfers = nil
-	m.clearedtransfers = false
-	m.removedtransfers = nil
+// ResetTransfersTo resets all changes to the "transfers_to" edge.
+func (m *AccountMutation) ResetTransfersTo() {
+	m.transfers_to = nil
+	m.clearedtransfers_to = false
+	m.removedtransfers_to = nil
+}
+
+// AddTransfersFromIDs adds the "transfers_from" edge to the Transfer entity by ids.
+func (m *AccountMutation) AddTransfersFromIDs(ids ...int) {
+	if m.transfers_from == nil {
+		m.transfers_from = make(map[int]struct{})
+	}
+	for i := range ids {
+		m.transfers_from[ids[i]] = struct{}{}
+	}
+}
+
+// ClearTransfersFrom clears the "transfers_from" edge to the Transfer entity.
+func (m *AccountMutation) ClearTransfersFrom() {
+	m.clearedtransfers_from = true
+}
+
+// TransfersFromCleared reports if the "transfers_from" edge to the Transfer entity was cleared.
+func (m *AccountMutation) TransfersFromCleared() bool {
+	return m.clearedtransfers_from
+}
+
+// RemoveTransfersFromIDs removes the "transfers_from" edge to the Transfer entity by IDs.
+func (m *AccountMutation) RemoveTransfersFromIDs(ids ...int) {
+	if m.removedtransfers_from == nil {
+		m.removedtransfers_from = make(map[int]struct{})
+	}
+	for i := range ids {
+		delete(m.transfers_from, ids[i])
+		m.removedtransfers_from[ids[i]] = struct{}{}
+	}
+}
+
+// RemovedTransfersFrom returns the removed IDs of the "transfers_from" edge to the Transfer entity.
+func (m *AccountMutation) RemovedTransfersFromIDs() (ids []int) {
+	for id := range m.removedtransfers_from {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// TransfersFromIDs returns the "transfers_from" edge IDs in the mutation.
+func (m *AccountMutation) TransfersFromIDs() (ids []int) {
+	for id := range m.transfers_from {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// ResetTransfersFrom resets all changes to the "transfers_from" edge.
+func (m *AccountMutation) ResetTransfersFrom() {
+	m.transfers_from = nil
+	m.clearedtransfers_from = false
+	m.removedtransfers_from = nil
 }
 
 // Where appends a list predicates to the AccountMutation builder.
@@ -469,9 +526,12 @@ func (m *AccountMutation) ResetField(name string) error {
 
 // AddedEdges returns all edge names that were set/added in this mutation.
 func (m *AccountMutation) AddedEdges() []string {
-	edges := make([]string, 0, 1)
-	if m.transfers != nil {
-		edges = append(edges, account.EdgeTransfers)
+	edges := make([]string, 0, 2)
+	if m.transfers_to != nil {
+		edges = append(edges, account.EdgeTransfersTo)
+	}
+	if m.transfers_from != nil {
+		edges = append(edges, account.EdgeTransfersFrom)
 	}
 	return edges
 }
@@ -480,9 +540,15 @@ func (m *AccountMutation) AddedEdges() []string {
 // name in this mutation.
 func (m *AccountMutation) AddedIDs(name string) []ent.Value {
 	switch name {
-	case account.EdgeTransfers:
-		ids := make([]ent.Value, 0, len(m.transfers))
-		for id := range m.transfers {
+	case account.EdgeTransfersTo:
+		ids := make([]ent.Value, 0, len(m.transfers_to))
+		for id := range m.transfers_to {
+			ids = append(ids, id)
+		}
+		return ids
+	case account.EdgeTransfersFrom:
+		ids := make([]ent.Value, 0, len(m.transfers_from))
+		for id := range m.transfers_from {
 			ids = append(ids, id)
 		}
 		return ids
@@ -492,9 +558,12 @@ func (m *AccountMutation) AddedIDs(name string) []ent.Value {
 
 // RemovedEdges returns all edge names that were removed in this mutation.
 func (m *AccountMutation) RemovedEdges() []string {
-	edges := make([]string, 0, 1)
-	if m.removedtransfers != nil {
-		edges = append(edges, account.EdgeTransfers)
+	edges := make([]string, 0, 2)
+	if m.removedtransfers_to != nil {
+		edges = append(edges, account.EdgeTransfersTo)
+	}
+	if m.removedtransfers_from != nil {
+		edges = append(edges, account.EdgeTransfersFrom)
 	}
 	return edges
 }
@@ -503,9 +572,15 @@ func (m *AccountMutation) RemovedEdges() []string {
 // the given name in this mutation.
 func (m *AccountMutation) RemovedIDs(name string) []ent.Value {
 	switch name {
-	case account.EdgeTransfers:
-		ids := make([]ent.Value, 0, len(m.removedtransfers))
-		for id := range m.removedtransfers {
+	case account.EdgeTransfersTo:
+		ids := make([]ent.Value, 0, len(m.removedtransfers_to))
+		for id := range m.removedtransfers_to {
+			ids = append(ids, id)
+		}
+		return ids
+	case account.EdgeTransfersFrom:
+		ids := make([]ent.Value, 0, len(m.removedtransfers_from))
+		for id := range m.removedtransfers_from {
 			ids = append(ids, id)
 		}
 		return ids
@@ -515,9 +590,12 @@ func (m *AccountMutation) RemovedIDs(name string) []ent.Value {
 
 // ClearedEdges returns all edge names that were cleared in this mutation.
 func (m *AccountMutation) ClearedEdges() []string {
-	edges := make([]string, 0, 1)
-	if m.clearedtransfers {
-		edges = append(edges, account.EdgeTransfers)
+	edges := make([]string, 0, 2)
+	if m.clearedtransfers_to {
+		edges = append(edges, account.EdgeTransfersTo)
+	}
+	if m.clearedtransfers_from {
+		edges = append(edges, account.EdgeTransfersFrom)
 	}
 	return edges
 }
@@ -526,8 +604,10 @@ func (m *AccountMutation) ClearedEdges() []string {
 // was cleared in this mutation.
 func (m *AccountMutation) EdgeCleared(name string) bool {
 	switch name {
-	case account.EdgeTransfers:
-		return m.clearedtransfers
+	case account.EdgeTransfersTo:
+		return m.clearedtransfers_to
+	case account.EdgeTransfersFrom:
+		return m.clearedtransfers_from
 	}
 	return false
 }
@@ -544,8 +624,11 @@ func (m *AccountMutation) ClearEdge(name string) error {
 // It returns an error if the edge is not defined in the schema.
 func (m *AccountMutation) ResetEdge(name string) error {
 	switch name {
-	case account.EdgeTransfers:
-		m.ResetTransfers()
+	case account.EdgeTransfersTo:
+		m.ResetTransfersTo()
+		return nil
+	case account.EdgeTransfersFrom:
+		m.ResetTransfersFrom()
 		return nil
 	}
 	return fmt.Errorf("unknown Account edge %s", name)
@@ -2970,22 +3053,22 @@ func (m *TransactionMutation) ResetEdge(name string) error {
 // TransferMutation represents an operation that mutates the Transfer nodes in the graph.
 type TransferMutation struct {
 	config
-	op             Op
-	typ            string
-	id             *int
-	from_address   *string
-	to_address     *string
-	token          *string
-	amount         *float64
-	addamount      *float64
-	denom          *string
-	created_at     *time.Time
-	clearedFields  map[string]struct{}
-	account        *string
-	clearedaccount bool
-	done           bool
-	oldValue       func(context.Context) (*Transfer, error)
-	predicates     []predicate.Transfer
+	op            Op
+	typ           string
+	id            *int
+	hash          *string
+	_func         *string
+	from_address  *string
+	to_address    *string
+	token         *string
+	amount        *float64
+	addamount     *float64
+	denom         *string
+	created_at    *time.Time
+	clearedFields map[string]struct{}
+	done          bool
+	oldValue      func(context.Context) (*Transfer, error)
+	predicates    []predicate.Transfer
 }
 
 var _ ent.Mutation = (*TransferMutation)(nil)
@@ -3092,6 +3175,78 @@ func (m *TransferMutation) IDs(ctx context.Context) ([]int, error) {
 	}
 }
 
+// SetHash sets the "hash" field.
+func (m *TransferMutation) SetHash(s string) {
+	m.hash = &s
+}
+
+// Hash returns the value of the "hash" field in the mutation.
+func (m *TransferMutation) Hash() (r string, exists bool) {
+	v := m.hash
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldHash returns the old "hash" field's value of the Transfer entity.
+// If the Transfer object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *TransferMutation) OldHash(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldHash is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldHash requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldHash: %w", err)
+	}
+	return oldValue.Hash, nil
+}
+
+// ResetHash resets all changes to the "hash" field.
+func (m *TransferMutation) ResetHash() {
+	m.hash = nil
+}
+
+// SetFunc sets the "func" field.
+func (m *TransferMutation) SetFunc(s string) {
+	m._func = &s
+}
+
+// Func returns the value of the "func" field in the mutation.
+func (m *TransferMutation) Func() (r string, exists bool) {
+	v := m._func
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldFunc returns the old "func" field's value of the Transfer entity.
+// If the Transfer object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *TransferMutation) OldFunc(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldFunc is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldFunc requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldFunc: %w", err)
+	}
+	return oldValue.Func, nil
+}
+
+// ResetFunc resets all changes to the "func" field.
+func (m *TransferMutation) ResetFunc() {
+	m._func = nil
+}
+
 // SetFromAddress sets the "from_address" field.
 func (m *TransferMutation) SetFromAddress(s string) {
 	m.from_address = &s
@@ -3123,9 +3278,22 @@ func (m *TransferMutation) OldFromAddress(ctx context.Context) (v string, err er
 	return oldValue.FromAddress, nil
 }
 
+// ClearFromAddress clears the value of the "from_address" field.
+func (m *TransferMutation) ClearFromAddress() {
+	m.from_address = nil
+	m.clearedFields[transfer.FieldFromAddress] = struct{}{}
+}
+
+// FromAddressCleared returns if the "from_address" field was cleared in this mutation.
+func (m *TransferMutation) FromAddressCleared() bool {
+	_, ok := m.clearedFields[transfer.FieldFromAddress]
+	return ok
+}
+
 // ResetFromAddress resets all changes to the "from_address" field.
 func (m *TransferMutation) ResetFromAddress() {
 	m.from_address = nil
+	delete(m.clearedFields, transfer.FieldFromAddress)
 }
 
 // SetToAddress sets the "to_address" field.
@@ -3159,9 +3327,22 @@ func (m *TransferMutation) OldToAddress(ctx context.Context) (v string, err erro
 	return oldValue.ToAddress, nil
 }
 
+// ClearToAddress clears the value of the "to_address" field.
+func (m *TransferMutation) ClearToAddress() {
+	m.to_address = nil
+	m.clearedFields[transfer.FieldToAddress] = struct{}{}
+}
+
+// ToAddressCleared returns if the "to_address" field was cleared in this mutation.
+func (m *TransferMutation) ToAddressCleared() bool {
+	_, ok := m.clearedFields[transfer.FieldToAddress]
+	return ok
+}
+
 // ResetToAddress resets all changes to the "to_address" field.
 func (m *TransferMutation) ResetToAddress() {
 	m.to_address = nil
+	delete(m.clearedFields, transfer.FieldToAddress)
 }
 
 // SetToken sets the "token" field.
@@ -3328,45 +3509,6 @@ func (m *TransferMutation) ResetCreatedAt() {
 	m.created_at = nil
 }
 
-// SetAccountID sets the "account" edge to the Account entity by id.
-func (m *TransferMutation) SetAccountID(id string) {
-	m.account = &id
-}
-
-// ClearAccount clears the "account" edge to the Account entity.
-func (m *TransferMutation) ClearAccount() {
-	m.clearedaccount = true
-}
-
-// AccountCleared reports if the "account" edge to the Account entity was cleared.
-func (m *TransferMutation) AccountCleared() bool {
-	return m.clearedaccount
-}
-
-// AccountID returns the "account" edge ID in the mutation.
-func (m *TransferMutation) AccountID() (id string, exists bool) {
-	if m.account != nil {
-		return *m.account, true
-	}
-	return
-}
-
-// AccountIDs returns the "account" edge IDs in the mutation.
-// Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
-// AccountID instead. It exists only for internal usage by the builders.
-func (m *TransferMutation) AccountIDs() (ids []string) {
-	if id := m.account; id != nil {
-		ids = append(ids, *id)
-	}
-	return
-}
-
-// ResetAccount resets all changes to the "account" edge.
-func (m *TransferMutation) ResetAccount() {
-	m.account = nil
-	m.clearedaccount = false
-}
-
 // Where appends a list predicates to the TransferMutation builder.
 func (m *TransferMutation) Where(ps ...predicate.Transfer) {
 	m.predicates = append(m.predicates, ps...)
@@ -3401,7 +3543,13 @@ func (m *TransferMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *TransferMutation) Fields() []string {
-	fields := make([]string, 0, 6)
+	fields := make([]string, 0, 8)
+	if m.hash != nil {
+		fields = append(fields, transfer.FieldHash)
+	}
+	if m._func != nil {
+		fields = append(fields, transfer.FieldFunc)
+	}
 	if m.from_address != nil {
 		fields = append(fields, transfer.FieldFromAddress)
 	}
@@ -3428,6 +3576,10 @@ func (m *TransferMutation) Fields() []string {
 // schema.
 func (m *TransferMutation) Field(name string) (ent.Value, bool) {
 	switch name {
+	case transfer.FieldHash:
+		return m.Hash()
+	case transfer.FieldFunc:
+		return m.Func()
 	case transfer.FieldFromAddress:
 		return m.FromAddress()
 	case transfer.FieldToAddress:
@@ -3449,6 +3601,10 @@ func (m *TransferMutation) Field(name string) (ent.Value, bool) {
 // database failed.
 func (m *TransferMutation) OldField(ctx context.Context, name string) (ent.Value, error) {
 	switch name {
+	case transfer.FieldHash:
+		return m.OldHash(ctx)
+	case transfer.FieldFunc:
+		return m.OldFunc(ctx)
 	case transfer.FieldFromAddress:
 		return m.OldFromAddress(ctx)
 	case transfer.FieldToAddress:
@@ -3470,6 +3626,20 @@ func (m *TransferMutation) OldField(ctx context.Context, name string) (ent.Value
 // type.
 func (m *TransferMutation) SetField(name string, value ent.Value) error {
 	switch name {
+	case transfer.FieldHash:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetHash(v)
+		return nil
+	case transfer.FieldFunc:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetFunc(v)
+		return nil
 	case transfer.FieldFromAddress:
 		v, ok := value.(string)
 		if !ok {
@@ -3556,7 +3726,14 @@ func (m *TransferMutation) AddField(name string, value ent.Value) error {
 // ClearedFields returns all nullable fields that were cleared during this
 // mutation.
 func (m *TransferMutation) ClearedFields() []string {
-	return nil
+	var fields []string
+	if m.FieldCleared(transfer.FieldFromAddress) {
+		fields = append(fields, transfer.FieldFromAddress)
+	}
+	if m.FieldCleared(transfer.FieldToAddress) {
+		fields = append(fields, transfer.FieldToAddress)
+	}
+	return fields
 }
 
 // FieldCleared returns a boolean indicating if a field with the given name was
@@ -3569,6 +3746,14 @@ func (m *TransferMutation) FieldCleared(name string) bool {
 // ClearField clears the value of the field with the given name. It returns an
 // error if the field is not defined in the schema.
 func (m *TransferMutation) ClearField(name string) error {
+	switch name {
+	case transfer.FieldFromAddress:
+		m.ClearFromAddress()
+		return nil
+	case transfer.FieldToAddress:
+		m.ClearToAddress()
+		return nil
+	}
 	return fmt.Errorf("unknown Transfer nullable field %s", name)
 }
 
@@ -3576,6 +3761,12 @@ func (m *TransferMutation) ClearField(name string) error {
 // It returns an error if the field is not defined in the schema.
 func (m *TransferMutation) ResetField(name string) error {
 	switch name {
+	case transfer.FieldHash:
+		m.ResetHash()
+		return nil
+	case transfer.FieldFunc:
+		m.ResetFunc()
+		return nil
 	case transfer.FieldFromAddress:
 		m.ResetFromAddress()
 		return nil
@@ -3600,28 +3791,19 @@ func (m *TransferMutation) ResetField(name string) error {
 
 // AddedEdges returns all edge names that were set/added in this mutation.
 func (m *TransferMutation) AddedEdges() []string {
-	edges := make([]string, 0, 1)
-	if m.account != nil {
-		edges = append(edges, transfer.EdgeAccount)
-	}
+	edges := make([]string, 0, 0)
 	return edges
 }
 
 // AddedIDs returns all IDs (to other nodes) that were added for the given edge
 // name in this mutation.
 func (m *TransferMutation) AddedIDs(name string) []ent.Value {
-	switch name {
-	case transfer.EdgeAccount:
-		if id := m.account; id != nil {
-			return []ent.Value{*id}
-		}
-	}
 	return nil
 }
 
 // RemovedEdges returns all edge names that were removed in this mutation.
 func (m *TransferMutation) RemovedEdges() []string {
-	edges := make([]string, 0, 1)
+	edges := make([]string, 0, 0)
 	return edges
 }
 
@@ -3633,41 +3815,24 @@ func (m *TransferMutation) RemovedIDs(name string) []ent.Value {
 
 // ClearedEdges returns all edge names that were cleared in this mutation.
 func (m *TransferMutation) ClearedEdges() []string {
-	edges := make([]string, 0, 1)
-	if m.clearedaccount {
-		edges = append(edges, transfer.EdgeAccount)
-	}
+	edges := make([]string, 0, 0)
 	return edges
 }
 
 // EdgeCleared returns a boolean which indicates if the edge with the given name
 // was cleared in this mutation.
 func (m *TransferMutation) EdgeCleared(name string) bool {
-	switch name {
-	case transfer.EdgeAccount:
-		return m.clearedaccount
-	}
 	return false
 }
 
 // ClearEdge clears the value of the edge with the given name. It returns an error
 // if that edge is not defined in the schema.
 func (m *TransferMutation) ClearEdge(name string) error {
-	switch name {
-	case transfer.EdgeAccount:
-		m.ClearAccount()
-		return nil
-	}
 	return fmt.Errorf("unknown Transfer unique edge %s", name)
 }
 
 // ResetEdge resets all changes to the edge with the given name in this mutation.
 // It returns an error if the edge is not defined in the schema.
 func (m *TransferMutation) ResetEdge(name string) error {
-	switch name {
-	case transfer.EdgeAccount:
-		m.ResetAccount()
-		return nil
-	}
 	return fmt.Errorf("unknown Transfer edge %s", name)
 }

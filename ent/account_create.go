@@ -41,19 +41,34 @@ func (_c *AccountCreate) SetID(v string) *AccountCreate {
 	return _c
 }
 
-// AddTransferIDs adds the "transfers" edge to the Transfer entity by IDs.
-func (_c *AccountCreate) AddTransferIDs(ids ...int) *AccountCreate {
-	_c.mutation.AddTransferIDs(ids...)
+// AddTransfersToIDs adds the "transfers_to" edge to the Transfer entity by IDs.
+func (_c *AccountCreate) AddTransfersToIDs(ids ...int) *AccountCreate {
+	_c.mutation.AddTransfersToIDs(ids...)
 	return _c
 }
 
-// AddTransfers adds the "transfers" edges to the Transfer entity.
-func (_c *AccountCreate) AddTransfers(v ...*Transfer) *AccountCreate {
+// AddTransfersTo adds the "transfers_to" edges to the Transfer entity.
+func (_c *AccountCreate) AddTransfersTo(v ...*Transfer) *AccountCreate {
 	ids := make([]int, len(v))
 	for i := range v {
 		ids[i] = v[i].ID
 	}
-	return _c.AddTransferIDs(ids...)
+	return _c.AddTransfersToIDs(ids...)
+}
+
+// AddTransfersFromIDs adds the "transfers_from" edge to the Transfer entity by IDs.
+func (_c *AccountCreate) AddTransfersFromIDs(ids ...int) *AccountCreate {
+	_c.mutation.AddTransfersFromIDs(ids...)
+	return _c
+}
+
+// AddTransfersFrom adds the "transfers_from" edges to the Transfer entity.
+func (_c *AccountCreate) AddTransfersFrom(v ...*Transfer) *AccountCreate {
+	ids := make([]int, len(v))
+	for i := range v {
+		ids[i] = v[i].ID
+	}
+	return _c.AddTransfersFromIDs(ids...)
 }
 
 // Mutation returns the AccountMutation object of the builder.
@@ -150,12 +165,28 @@ func (_c *AccountCreate) createSpec() (*Account, *sqlgraph.CreateSpec) {
 		_spec.SetField(account.FieldAmount, field.TypeFloat64, value)
 		_node.Amount = value
 	}
-	if nodes := _c.mutation.TransfersIDs(); len(nodes) > 0 {
+	if nodes := _c.mutation.TransfersToIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
-			Table:   account.TransfersTable,
-			Columns: []string{account.TransfersColumn},
+			Table:   account.TransfersToTable,
+			Columns: []string{account.TransfersToColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(transfer.FieldID, field.TypeInt),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := _c.mutation.TransfersFromIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   account.TransfersFromTable,
+			Columns: []string{account.TransfersFromColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(transfer.FieldID, field.TypeInt),
