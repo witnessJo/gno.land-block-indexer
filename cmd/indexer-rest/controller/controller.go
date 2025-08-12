@@ -60,8 +60,14 @@ func (c *Controller) Run(ctx context.Context) error {
 func (c *Controller) GetTokenBalances(gCtx *gin.Context) {
 	ctx := gCtx.Request.Context()
 	var request struct {
-		Address string `json:"address" binding:"required"`
+		Address string `form:"address"`
 	}
+	if err := gCtx.ShouldBindQuery(&request); err != nil {
+		c.logger.Errorf("Failed to bind request: %v", err)
+		gCtx.JSON(400, gin.H{"error": "Invalid request"})
+		return
+	}
+
 	accounts, err := c.service.GetTokenBalances(ctx, request.Address)
 	if err != nil {
 		c.logger.Errorf("Failed to get account balances: %v", err)
@@ -69,24 +75,21 @@ func (c *Controller) GetTokenBalances(gCtx *gin.Context) {
 		return
 	}
 
+	type Balance struct {
+		TokenPath string `json:"tokenPath"`
+		Amount    int64  `json:"amount"`
+	}
 	var response struct {
-		Balances []struct {
-			TokenPath string
-			Amount    int64
-		}
+		Balances []Balance `json:"balances"`
 	}
 	for _, account := range accounts {
-		response.Balances = append(response.Balances, struct {
-			TokenPath string
-			Amount    int64
-		}{
+		response.Balances = append(response.Balances, Balance{
 			TokenPath: account.Token,
 			Amount:    int64(account.Amount),
 		})
 	}
 
 	gCtx.JSON(200, response)
-	return
 }
 
 func (c *Controller) GetTokenAccountBalances(gCtx *gin.Context) {
@@ -104,29 +107,65 @@ func (c *Controller) GetTokenAccountBalances(gCtx *gin.Context) {
 	tokenPath = strings.TrimPrefix(tokenPath, "/")
 	address := gCtx.Query("address")
 
-	token, err := c.service.GetTokenAccountBalances(ctx, tokenPath, address)
+	tokenAccountBalances, err := c.service.GetTokenAccountBalances(ctx, tokenPath, address)
 	if err != nil {
 		return
 	}
-	if token == nil {
+	if tokenAccountBalances == nil {
 		c.logger.Errorf("Token not found for path: %s", address)
 		gCtx.JSON(404, gin.H{"error": "Token not found"})
 		return
 	}
-	gCtx.JSON(200, gin.H{
-		"token_path": tokenPath,
-		"balances":   token,
-	})
-	return
+	type TokenAccountBalance struct {
+		Address   string `json:"address"`
+		TokenPath string `json:"tokenPath"`
+		Amount    int64  `json:"amount"`
+	}
+	var response struct {
+		AccountBalances []TokenAccountBalance `json:"accountBalances"`
+	}
+	for _, account := range tokenAccountBalances {
+		response.AccountBalances = append(response.AccountBalances, TokenAccountBalance{
+			Address:   account.Address,
+			TokenPath: account.Token,
+			Amount:    int64(account.Amount),
+		})
+	}
+	if len(response.AccountBalances) == 0 {
+		response.AccountBalances = []TokenAccountBalance{}
+	}
+
+	gCtx.JSON(200, response)
 }
 
 func (c *Controller) GetTransferHistory(gCtx *gin.Context) {
 	ctx := gCtx.Request.Context()
 	var request struct {
-		Address string `json:"address" binding:"required"`
+		Address string `form:"address"`
 	}
-	_, err := c.service.GetTransferHistory(ctx, request.Address)
+	transferHistories, err := c.service.GetTransferHistory(ctx, request.Address)
 	if err != nil {
 		return
 	}
+
+	type Transfer struct {
+		FromAddress string `json:"fromAddress"`
+		ToAddress   string `json:"toAddress"`
+		Token       string `json:"token"`
+		Amount      int64  `json:"amount"`
+	}
+	var response struct {
+		Transfer []Transfer `json:"transfers"`
+	}
+
+	for _, transferHistory := range transferHistories {
+		response.Transfer = append(response.Transfer, Transfer{
+			FromAddress: transferHistory.FromAddress,
+			ToAddress:   transferHistory.ToAddress,
+			Token:       transferHistory.Token,
+			Amount:      int64(transferHistory.Amount),
+		})
+	}
+
+	gCtx.JSON(200, response)
 }

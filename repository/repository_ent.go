@@ -288,11 +288,18 @@ func (r *RepositoryEnt) AddAccount(ctx context.Context, account *model.Account) 
 
 // GetAccount implements Repository.
 func (r *RepositoryEnt) GetAccount(ctx context.Context, address string, token string) (*model.Account, error) {
-	entAccount, err := r.client.Account.Query().
-		Where(
+	accountQuery := r.client.Account.Query()
+	if address != "" {
+		accountQuery = accountQuery.Where(
 			account.IDEQ(address),
+		)
+	}
+	if token != "" {
+		accountQuery = accountQuery.Where(
 			account.TokenEQ(token),
-		).Only(ctx)
+		)
+	}
+	entAccount, err := accountQuery.Only(ctx)
 	if err != nil {
 		if ent.IsNotFound(err) {
 			return nil, nil // Account not found
@@ -309,11 +316,14 @@ func (r *RepositoryEnt) GetAccount(ctx context.Context, address string, token st
 
 // GetAccounts implements Repository.
 func (r *RepositoryEnt) GetAccounts(ctx context.Context, address string, token string) ([]model.Account, error) {
-	accounts, err := r.client.Account.Query().
-		Where(
-			account.IDEQ(address),
-			account.TokenEQ(token),
-		).All(ctx)
+	accountQuery := r.client.Account.Query()
+	if address != "" {
+		accountQuery = accountQuery.Where(account.IDEQ(address))
+	}
+	if token != "" {
+		accountQuery = accountQuery.Where(account.TokenEQ(token))
+	}
+	accounts, err := accountQuery.All(ctx)
 	if err != nil {
 		if ent.IsNotFound(err) {
 			return nil, nil // No accounts found
@@ -324,8 +334,8 @@ func (r *RepositoryEnt) GetAccounts(ctx context.Context, address string, token s
 	accountModels := make([]model.Account, len(accounts))
 	for i, entAccount := range accounts {
 		accountModels[i] = model.Account{
-			Address: address,
-			Token:   token,
+			Address: entAccount.ID,
+			Token:   entAccount.Token,
 			Amount:  entAccount.Amount,
 		}
 	}
@@ -346,7 +356,8 @@ func (r *RepositoryEnt) GetBalances(ctx context.Context, address string) ([]mode
 			Where(account.IDEQ(address)).
 			GroupBy(account.FieldToken)
 	}
-	err := accountQuery.Scan(ctx, &balances)
+	err := accountQuery.Aggregate(ent.As(ent.Sum(account.FieldAmount), "amount")).
+		Scan(ctx, &balances)
 	if err != nil {
 		if ent.IsNotFound(err) {
 			return nil, nil // No balances found
