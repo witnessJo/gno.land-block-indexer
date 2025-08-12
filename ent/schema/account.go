@@ -4,6 +4,7 @@ import (
 	"entgo.io/ent"
 	"entgo.io/ent/schema/edge"
 	"entgo.io/ent/schema/field"
+	"entgo.io/ent/schema/index"
 )
 
 // Block holds the schema definition for the Block entity.
@@ -28,5 +29,13 @@ func (Account) Edges() []ent.Edge {
 			StorageKey(edge.Column("to_address")),
 		edge.To("transfers_from", Transfer.Type).
 			StorageKey(edge.Column("from_address")),
+	}
+}
+
+// Indexes - address와 token의 조합을 유니크로 설정
+func (Account) Indexes() []ent.Index {
+	return []ent.Index{
+		// Composite unique index
+		index.Fields("id", "token").Unique(),
 	}
 }

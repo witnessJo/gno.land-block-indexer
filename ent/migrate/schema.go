@@ -19,6 +19,13 @@ var (
 		Name:       "accounts",
 		Columns:    AccountsColumns,
 		PrimaryKey: []*schema.Column{AccountsColumns[0]},
+		Indexes: []*schema.Index{
+			{
+				Name:    "account_address_token",
+				Unique:  true,
+				Columns: []*schema.Column{AccountsColumns[0], AccountsColumns[1]},
+			},
+		},
 	}
 	// BlocksColumns holds the columns for the "blocks" table.
 	BlocksColumns = []*schema.Column{
@@ -107,6 +114,18 @@ var (
 				Columns:    []*schema.Column{TransfersColumns[3]},
 				RefColumns: []*schema.Column{AccountsColumns[0]},
 				OnDelete:   schema.SetNull,
+			},
+		},
+		Indexes: []*schema.Index{
+			{
+				Name:    "transfer_from_address_token",
+				Unique:  false,
+				Columns: []*schema.Column{TransfersColumns[3], TransfersColumns[5]},
+			},
+			{
+				Name:    "transfer_to_address_token",
+				Unique:  false,
+				Columns: []*schema.Column{TransfersColumns[4], TransfersColumns[5]},
 			},
 		},
 	}
