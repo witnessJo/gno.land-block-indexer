@@ -30,6 +30,10 @@ Gno.land Block Indexer는 Gno 블록체인의 블록, 트랜잭션, 전송, 계�
 -   인덱싱된 데이터에 대한 REST API 제공
 -   로컬 캐싱을 통한 성능 최적화
 
+## Architecture Diagram
+
+![](design.png)
+
 # Technology Stack
 
 -   **Language**: Go 1.23+

@@ -26,6 +26,102 @@ Gno.land Block Indexer는 Gno 블록체인의 블록, 트랜잭션, 전송, 계�
 - 인덱싱된 데이터에 대한 REST API 제공
 - 로컬 캐싱을 통한 성능 최적화
 
+** Architecture Diagram
+#+begin_src plantuml :file design.png
+@startuml
+!theme plain
+
+participant Client
+participant "Indexer REST API" as RestAPI
+participant "Local Cache" as Cache
+participant "Block Synchronizer" as BlockSync
+participant "Gno Blockchain" as GnoChain
+participant "Message Broker\n(SNS/SQS)" as MsgBroker
+participant "Event Processor" as EventProc
+participant PostgreSQL as DB
+
+note over BlockSync, EventProc: System Initialization
+BlockSync -> DB: Connect to PostgreSQL
+BlockSync -> MsgBroker: Connect to LocalStack
+EventProc -> DB: Connect to PostgreSQL
+EventProc -> MsgBroker: Connect to LocalStack
+RestAPI -> DB: Connect to PostgreSQL
+RestAPI -> Cache: Initialize 100MB Cache
+
+note over BlockSync, GnoChain: Block Synchronization Process
+BlockSync -> GnoChain: Subscribe to WebSocket\n(wss://indexer.onbloc.xyz)
+
+loop Real-time Block Sync
+    GnoChain -> BlockSync: New Block Event
+    BlockSync -> GnoChain: Query Block Details (GraphQL)
+    BlockSync -> GnoChain: Query Transaction Details
+    BlockSync -> MsgBroker: Publish(topic: "block_with_txs",\nBlockWithTransactions)
+end
+
+note over BlockSync, DB: Missing Block Restoration
+loop Restore Missing Blocks
+    BlockSync -> DB: GetMissingBlocks()
+    BlockSync -> GnoChain: PollBlocks(offset, limit)
+    BlockSync -> GnoChain: PollTransactions(blockOffset, limit)
+    BlockSync -> MsgBroker: Publish(topic: "block_with_txs",\nBlockWithTransactions)
+end
+
+note over EventProc, DB: Event Processing
+EventProc -> MsgBroker: Subscribe(topic: "block_with_txs")
+
+loop Process Events
+    MsgBroker -> EventProc: BlockWithTransactions Message
+    EventProc -> EventProc: Parse Transactions
+    EventProc -> EventProc: Extract Transfers
+    EventProc -> EventProc: Update Account Balances
+    EventProc -> DB: Save Block
+    EventProc -> DB: Save Transactions
+    EventProc -> DB: Save Transfers
+    EventProc -> DB: Update Accounts
+end
+
+note over Client, RestAPI: API Requests
+
+Client -> RestAPI: GET /blocks
+RestAPI -> Cache: Check Cache
+alt Cache Hit
+    Cache -> RestAPI: Cached Data
+else Cache Miss
+    RestAPI -> DB: Query Blocks
+    DB -> RestAPI: Block Data
+    RestAPI -> Cache: Store in Cache
+end
+RestAPI -> Client: JSON Response
+
+Client -> RestAPI: GET /transactions
+RestAPI -> Cache: Check Cache
+alt Cache Hit
+    Cache -> RestAPI: Cached Data
+else Cache Miss
+    RestAPI -> DB: Query Transactions
+    DB -> RestAPI: Transaction Data
+    RestAPI -> Cache: Store in Cache
+end
+RestAPI -> Client: JSON Response
+
+Client -> RestAPI: GET /accounts/{address}
+RestAPI -> Cache: Check Cache
+alt Cache Hit
+    Cache -> RestAPI: Cached Data
+else Cache Miss
+    RestAPI -> DB: Query Account
+    DB -> RestAPI: Account Data
+    RestAPI -> Cache: Store in Cache
+end
+RestAPI -> Client: JSON Response
+
+@enduml
+#+end_src
+
+#+RESULTS:
+[[file:design.png]]
+
+
 * Technology Stack
 
 - *Language*: Go 1.23+
@@ -47,53 +143,53 @@ Gno.land Block Indexer는 Gno 블록체인의 블록, 트랜잭션, 전송, 계�
 ** Installation
 
 1. Repository 클론:
-   #+begin_src shell
-   git clone <repository-url>
-   cd gno.land-block-indexer
-   #+end_src
+         #+begin_src shell
+           git clone <repository-url>
+           cd gno.land-block-indexer
+         #+end_src
 
 2. 의존성 설치:
-   #+begin_src shell
-   go mod download
-   #+end_src
+      #+begin_src shell
+        go mod download
+      #+end_src
 
 3. Ent 설치 및 코드 생성:
-   #+begin_src shell
-   make ent-install
-   make ent
-   #+end_src
+      #+begin_src shell
+        make ent-install
+        make ent
+      #+end_src
 
 ** Running the Application
 
 *** Using Make
 
 1. 모든 바이너리 빌드:
-   #+begin_src shell
-   make all
-   #+end_src
+         #+begin_src shell
+           make all
+         #+end_src
 
 2. 인프라 시작 (PostgreSQL, LocalStack):
-   #+begin_src shell
-   make infra
-   #+end_src
+      #+begin_src shell
+        make infra
+      #+end_src
 
 3. 각 컴포넌트 실행:
-   #+begin_src shell
-   ./bin/block-synchronizer
-   ./bin/event-processor  
-   ./bin/indexer-rest
-   #+end_src
+      #+begin_src shell
+        ./bin/block-synchronizer
+        ./bin/event-processor  
+        ./bin/indexer-rest
+      #+end_src
 
 *** Using Docker Compose
 
 #+begin_src shell
-./start-infra-compose.sh
+  ./start-infra-compose.sh
 #+end_src
 
 *** Using Kubernetes
 
 #+begin_src shell
-./start-infra-kube.sh
+  ./start-infra-kube.sh
 #+end_src
 
 * Database Schema
@@ -119,14 +215,14 @@ REST API 엔드포인트는 Postman Collection으로 문서화되어 있습니�
 ** Building Individual Components
 
 #+begin_src shell
-# Block Synchronizer
-make bs-bin
+  # Block Synchronizer
+  make bs-bin
 
-# Event Processor  
-make ep-bin
+  # Event Processor  
+  make ep-bin
 
-# REST API Server
-make rest-bin
+  # REST API Server
+  make rest-bin
 #+end_src
 
 ** Code Generation
@@ -134,13 +230,13 @@ make rest-bin
 Ent 스키마 변경 후 코드 재생성:
 
 #+begin_src shell
-make ent
+  make ent
 #+end_src
 
 ** Testing
 
 #+begin_src shell
-go test ./...
+  go test ./...
 #+end_src
 
 * TODO
