@@ -3,13 +3,15 @@ package msgbroker
 import (
 	"context"
 	"fmt"
-	"log"
 	"testing"
 	"time"
+
+	"gno.land-block-indexer/lib/log"
 )
 
 func TestMsgBroker(t *testing.T) {
 	ctx := context.Background()
+	logger := log.NewLogger()
 
 	// LocalStack 설정 (Docker에서 실행 중)
 	config := &LocalStackConfig{
@@ -18,7 +20,7 @@ func TestMsgBroker(t *testing.T) {
 	}
 
 	// 메시지 브로커 생성
-	broker, err := NewMsgBrokerLocalStack(ctx, config)
+	broker, err := NewMsgBrokerLocalStack(ctx, logger, config)
 	if err != nil {
 		log.Fatalf("Failed to create message broker: %v", err)
 	}
@@ -55,9 +57,9 @@ func TestMsgBroker(t *testing.T) {
 	for i, msg := range messages {
 		err = broker.Publish(topicName, []byte(msg))
 		if err != nil {
-			log.Printf("Failed to publish message %d: %v", i+1, err)
+			t.Errorf("Failed to publish message %d: %v", i+1, err)
 		} else {
-			log.Printf("Published message %d: %s", i+1, msg)
+			t.Logf("Published message %d: %s", i+1, msg)
 		}
 		time.Sleep(1 * time.Second)
 	}

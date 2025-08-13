@@ -39,7 +39,7 @@ func GetTestService(ctx context.Context) Service {
 func TestPollBlocks(t *testing.T) {
 	ctx := context.Background()
 	service := GetTestService(ctx)
-	blocks, err := service.PollBlocks(191400, 100)
+	blocks, err := service.PollBlocks(0, 100)
 	if err != nil {
 		t.Fatalf("Failed to poll blocks: %v", err)
 	}
