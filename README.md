@@ -28,7 +28,6 @@ Gno.land Block Indexer는 Gno 블록체인의 블록, 트랜잭션, 전송, 계�
 ### Indexer REST API (`cmd/indexer-rest`)
 
 -   인덱싱된 데이터에 대한 REST API 제공
--   GraphQL 엔드포인트 지원
 -   로컬 캐싱을 통한 성능 최적화
 
 # Technology Stack
@@ -98,13 +97,13 @@ Gno.land Block Indexer는 Gno 블록체인의 블록, 트랜잭션, 전송, 계�
 ### Using Docker Compose
 
 ``` shell
-docker-compose -f containers-compose.yaml up
+./start-infra-compose.sh
 ```
 
 ### Using Kubernetes
 
 ``` shell
-kubectl apply -f containers-kube.yaml
+./start-infra-kube.sh
 ```
 
 # Database Schema
