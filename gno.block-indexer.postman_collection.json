@@ -1,0 +1,92 @@
+{
+	"info": {
+		"_postman_id": "2143a8c0-250f-4d25-865a-77939e0416b7",
+		"name": "gno.block-indexer",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "5130059"
+	},
+	"item": [
+		{
+			"name": "GetTokenBalances",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "http://127.0.0.1:8080/tokens/balances?address=g16a7etgm9z2r653ucl36rj0l2yqcxgrz2jyegzx",
+					"protocol": "http",
+					"host": [
+						"127",
+						"0",
+						"0",
+						"1"
+					],
+					"port": "8080",
+					"path": [
+						"tokens",
+						"balances"
+					],
+					"query": [
+						{
+							"key": "address",
+							"value": "g16a7etgm9z2r653ucl36rj0l2yqcxgrz2jyegzx"
+						}
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "GetTokenAccountBalances",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "http://127.0.0.1:8080/tokens/{{token}}/balances?address=g16a7etgm9z2r653ucl36rj0l2yqcxgrz2jyegzx",
+					"protocol": "http",
+					"host": [
+						"127",
+						"0",
+						"0",
+						"1"
+					],
+					"port": "8080",
+					"path": [
+						"tokens",
+						"{{token}}",
+						"balances"
+					],
+					"query": [
+						{
+							"key": "address",
+							"value": "g16a7etgm9z2r653ucl36rj0l2yqcxgrz2jyegzx"
+						}
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "GetTransferHistories",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "http://127.0.0.1:8080/tokens/transfer-history",
+					"protocol": "http",
+					"host": [
+						"127",
+						"0",
+						"0",
+						"1"
+					],
+					"port": "8080",
+					"path": [
+						"tokens",
+						"transfer-history"
+					]
+				}
+			},
+			"response": []
+		}
+	]
+}
