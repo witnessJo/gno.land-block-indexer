@@ -57,8 +57,6 @@ func (c *Controller) Run(ctx context.Context) error {
 func (c *Controller) handleTokenRoutes(gCtx *gin.Context) {
 	path := gCtx.Param("any")
 
-	c.logger.Infof("Received request for path: %s", path)
-
 	switch {
 	case path == "/balances":
 		c.GetTokenBalances(gCtx)

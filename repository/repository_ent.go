@@ -42,7 +42,7 @@ func NewRepositoryEnt(logger log.Logger, config *RepositoryEntConfig) Repository
 		logger.Fatalf("failed creating schema resources: %v", err)
 	}
 
-	client = client.Debug() // Enable debug mode for development
+	// client = client.Debug() // Enable debug mode for development
 
 	return &RepositoryEnt{
 		logger: logger,
