@@ -18,19 +18,6 @@ services:
       timeout: 5s
       retries: 5
 
-  redis:
-    image: redis:8.2.0
-    container_name: redis-pod
-    ports:
-      - "6379:6379"
-    networks:
-      - app-network
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-
   localstack:
     image: localstack/localstack:latest
     container_name: localstack-pod
