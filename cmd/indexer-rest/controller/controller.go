@@ -1,10 +1,13 @@
 package controller
 
 import (
+	"bytes"
 	"context"
+	"fmt"
 	"strconv"
 	"strings"
 
+	"github.com/coocood/freecache"
 	"github.com/gin-gonic/gin"
 	"gno.land-block-indexer/cmd/indexer-rest/service"
 	"gno.land-block-indexer/lib/log"
@@ -13,6 +16,7 @@ import (
 
 type Controller struct {
 	logger     log.Logger
+	localCache *freecache.Cache
 	listenHost string
 	listenPort int
 	service    service.Service
@@ -30,17 +34,82 @@ func NewController(logger log.Logger) *Controller {
 	})
 	service := service.NewService(logger, repo)
 
+	cacheSize := 100 * 1024 * 1024 // 100 MB
+	localCache := freecache.NewCache(cacheSize)
+	if localCache == nil {
+		logger.Fatalf("Failed to create local cache with size %d bytes", cacheSize)
+	}
+
 	return &Controller{
 		engine:     engine,
 		logger:     logger,
 		service:    service,
 		listenHost: "localhost",
 		listenPort: 8080,
+		localCache: localCache,
 	}
 }
 
+func (c *Controller) getMemcacheKey(ctx *gin.Context) string {
+	return fmt.Sprintf("%s?%s", ctx.Request.URL.Path, ctx.Request.URL.RawQuery)
+}
+
+type bodyLogWriter struct {
+	gin.ResponseWriter
+	body *bytes.Buffer
+}
+
+func (w bodyLogWriter) Write(b []byte) (int, error) {
+	w.body.Write(b)
+	return w.ResponseWriter.Write(b)
+}
+
 func (c *Controller) Run(ctx context.Context) error {
+	c.engine.Use(func(gCtx *gin.Context) {
+		if gCtx.Request.Method != "GET" {
+			c.logger.Infof("Skipping caching for non-GET request: %s %s", gCtx.Request.Method, gCtx.Request.URL.Path)
+			gCtx.Next()
+			return
+		}
+		key := c.getMemcacheKey(gCtx)
+		if value, found := c.findFromLocalCache(key); found {
+			c.logger.Infof("Cache hit for key: %s", key)
+			gCtx.Data(200, "application/json", value)
+			gCtx.Abort()
+			return
+		}
+		gCtx.Set("cached", false)
+		gCtx.Set("memcacheKey", key)
+	})
+
+	c.engine.Use(func(gCtx *gin.Context) {
+		blw := &bodyLogWriter{body: bytes.NewBufferString(""), ResponseWriter: gCtx.Writer}
+		gCtx.Writer = blw
+
+		gCtx.Next()
+
+		cached, ok := gCtx.Get("cached")
+		if ok && cached.(bool) {
+			return
+		}
+		key, ok := gCtx.Get("memcacheKey")
+		if !ok {
+			c.logger.Errorf("No memcache key found in context")
+			return
+		}
+
+		if gCtx.Writer.Status() == 200 && blw.body.Len() > 0 {
+			data := blw.body.Bytes()
+			if err := c.localCache.Set([]byte(key.(string)), data, 60); err != nil {
+				c.logger.Errorf("Failed to set cache for key %s: %v", key, err)
+			} else {
+				c.logger.Infof("Stored response in local cache for key: %s", key)
+			}
+		}
+	})
+
 	c.engine.GET("/tokens/*any", c.handleTokenRoutes)
+
 	// Start the HTTP server
 	address := c.listenHost + ":" + strconv.Itoa(c.listenPort)
 	if err := c.engine.Run(address); err != nil {
@@ -78,6 +147,18 @@ func (c *Controller) handleTokenRoutes(gCtx *gin.Context) {
 	}
 }
 
+func (c *Controller) findFromLocalCache(key string) ([]byte, bool) {
+	value, err := c.localCache.Get([]byte(key))
+	if err != nil {
+		if err == freecache.ErrNotFound {
+			return nil, false
+		}
+		c.logger.Errorf("Error retrieving from local cache: %v", err)
+		return nil, false
+	}
+	return value, true
+}
+
 func (c *Controller) GetTokenBalances(gCtx *gin.Context) {
 	ctx := gCtx.Request.Context()
 	var request struct {
@@ -88,7 +169,6 @@ func (c *Controller) GetTokenBalances(gCtx *gin.Context) {
 		gCtx.JSON(400, gin.H{"error": "Invalid request"})
 		return
 	}
-
 	accounts, err := c.service.GetTokenBalances(ctx, request.Address)
 	if err != nil {
 		c.logger.Errorf("Failed to get account balances: %v", err)
