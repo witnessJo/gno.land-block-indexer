@@ -56,8 +56,6 @@ func (r *repositoryBsEnt) GetNotSequentialBlockNum(ctx context.Context, limit in
 
 // SaveRestoringHistory implements RepositoryBs.
 func (r *repositoryBsEnt) SaveRestoringHistory(ctx context.Context, startBlock int, endBlock int) error {
-	r.logger.Infof("Saving restoring history from block %d to %d", startBlock, endBlock)
-
 	// Save only one entry for the same range (id:1)
 	err := r.client.RestoreHistory.Create().
 		SetID(1).

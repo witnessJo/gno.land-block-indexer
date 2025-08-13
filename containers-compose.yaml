@@ -3,34 +3,62 @@ version: '3.8'
 services:
   postgres:
     image: postgres:17.5
-    container_name: postgres-container
+    container_name: postgres-pod
     environment:
-      POSTGRES_PASSWORD: postgress
+      POSTGRES_PASSWORD: postgres
       POSTGRES_DB: postgres
       POSTGRES_USER: postgres
     ports:
       - "5432:5432"
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-    restart: unless-stopped
     networks:
       - app-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   redis:
     image: redis:8.2.0
-    container_name: redis-container
+    container_name: redis-pod
     ports:
       - "6379:6379"
-    volumes:
-      - redis_data:/data
-    restart: unless-stopped
     networks:
       - app-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
-volumes:
-  postgres_data:
-  redis_data:
+  localstack:
+    image: localstack/localstack:latest
+    container_name: localstack-pod
+    environment:
+      SERVICES: "s3,dynamodb,sqs,sns,lambda,apigateway,cloudformation,iam,sts"
+      DEBUG: "1"
+      DATA_DIR: "/var/lib/localstack/data"
+      PERSISTENCE: "1"
+      DOCKER_HOST: "unix:///var/run/docker.sock"
+      TMPDIR: "/var/lib/localstack/tmp"
+    ports:
+      - "4566:4566"    # Edge port
+      - "4510-4559:4510-4559"  # Service port range
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - localstack-data:/var/lib/localstack
+    networks:
+      - app-network
+    privileged: true
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:4566/_localstack/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
 
 networks:
   app-network:
     driver: bridge
+
+volumes:
+  localstack-data:

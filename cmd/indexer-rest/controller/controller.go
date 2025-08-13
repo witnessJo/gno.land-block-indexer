@@ -40,10 +40,7 @@ func NewController(logger log.Logger) *Controller {
 }
 
 func (c *Controller) Run(ctx context.Context) error {
-	c.engine.GET("/account/balances", c.GetTokenBalances)
-	c.engine.GET("/tokens/*token_path", c.GetTokenAccountBalances)
-	c.engine.GET("/transfer/history", c.GetTransferHistory)
-
+	c.engine.GET("/tokens/*any", c.handleTokenRoutes)
 	// Start the HTTP server
 	address := c.listenHost + ":" + strconv.Itoa(c.listenPort)
 	if err := c.engine.Run(address); err != nil {
@@ -55,6 +52,32 @@ func (c *Controller) Run(ctx context.Context) error {
 	c.logger.Infof("Repository connected to %s:%d", c.listenHost, c.listenPort)
 
 	return nil
+}
+
+func (c *Controller) handleTokenRoutes(gCtx *gin.Context) {
+	path := gCtx.Param("any")
+
+	c.logger.Infof("Received request for path: %s", path)
+
+	switch {
+	case path == "/balances":
+		c.GetTokenBalances(gCtx)
+	case path == "/transfer-history":
+		c.GetTransferHistory(gCtx)
+	case strings.HasSuffix(path, "/balances"):
+		tokenPath := strings.TrimSuffix(path, "/balances")
+		if tokenPath == "" {
+			c.logger.Errorf("Token path is empty")
+			gCtx.JSON(400, gin.H{"error": "Token path cannot be empty"})
+			return
+		}
+		if strings.HasPrefix(tokenPath, "/") {
+			tokenPath = strings.TrimPrefix(tokenPath, "/")
+		}
+		c.GetTokenAccountBalances(gCtx, tokenPath)
+	default:
+		gCtx.JSON(404, gin.H{"error": "endpoint not found"})
+	}
 }
 
 func (c *Controller) GetTokenBalances(gCtx *gin.Context) {
@@ -95,30 +118,14 @@ func (c *Controller) GetTokenBalances(gCtx *gin.Context) {
 	gCtx.JSON(200, response)
 }
 
-func (c *Controller) GetTokenAccountBalances(gCtx *gin.Context) {
+func (c *Controller) GetTokenAccountBalances(gCtx *gin.Context, tokenPath string) {
 	ctx := gCtx.Request.Context()
-	// get token_path from URL parameters (remove leading slash from wildcard capture)
-	paramPath := gCtx.Param("token_path")
-	c.logger.Infof("Received request for token path: %s", paramPath)
-
-	if !strings.HasSuffix(paramPath, "/balances") {
-		gCtx.JSON(404, gin.H{"error": "endpoint not found"})
-		return
-	}
-
-	tokenPath := strings.TrimSuffix(paramPath, "/balances")
-	tokenPath = strings.TrimPrefix(tokenPath, "/")
 	address := gCtx.Query("address")
-
 	tokenAccountBalances, err := c.service.GetTokenAccountBalances(ctx, tokenPath, address)
 	if err != nil {
 		return
 	}
-	if tokenAccountBalances == nil {
-		c.logger.Errorf("Token not found for path: %s", address)
-		gCtx.JSON(404, gin.H{"error": "Token not found"})
-		return
-	}
+
 	type TokenAccountBalance struct {
 		Address   string `json:"address"`
 		TokenPath string `json:"tokenPath"`

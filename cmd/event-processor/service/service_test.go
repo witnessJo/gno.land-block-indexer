@@ -23,16 +23,13 @@ func GetTestService(ctx context.Context) Service {
 
 	return &service{
 		logger: logger,
-		repo: repository.NewRepositoryEnt(
-			logger,
-			&repository.RepositoryEntConfig{
-				Database: "postgres",
-				User:     "postgres",
-				Password: "password",
-				Host:     "localhost",
-				Port:     5432,
-			},
-		),
+		repo: repository.NewRepositoryEnt(logger, &repository.RepositoryEntConfig{
+			Database: "postgres",
+			User:     "postgres",
+			Password: "postgres",
+			Host:     "localhost",
+			Port:     5432,
+		}),
 		msgBroker: mb,
 	}
 }
